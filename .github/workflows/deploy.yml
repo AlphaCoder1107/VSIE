@@ -27,7 +27,8 @@ jobs:
 
       - name: Build (Next.js export)
         env:
-          NEXT_PUBLIC_BASE_PATH: ${{ github.repository_owner == github.repository && '' || '' }}
+          # For GitHub Pages under https://<user>.github.io/<repo>, set basePath to "/<repo>"
+          NEXT_PUBLIC_BASE_PATH: "/${{ github.event.repository.name }}"
         run: |
           npm run build
 
