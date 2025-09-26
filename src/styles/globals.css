@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --bg-900: #0b1220;
+  --bg-800: #0f1724;
+  --muted: #98a0b3;
+  --accent: #6c5cff;
+  --accent-2: #7b61ff;
+  --glass: rgba(255,255,255,0.04);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--bg-900);
+}
+
+/* Reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* Prose dark tweaks */
+.prose.prose-invert {
+  --tw-prose-body: theme(colors.vsie-muted);
+}
+
+/* Hide typing caret globally, but keep for form fields and editable areas */
+*:not(input):not(textarea):not([contenteditable="true"]) {
+  caret-color: transparent;
+}

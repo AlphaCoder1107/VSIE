@@ -1,0 +1,32 @@
+[
+  {
+    "slug": "innovation-bootcamp-oct-2025",
+    "title": "Innovation Bootcamp — October 2025",
+    "excerpt": "A weekend bootcamp to take your idea from zero to one.",
+    "description": "Join mentors and founders for a hands-on sprint to validate your idea, build an MVP, and pitch to a panel.",
+    "date": "2025-10-15",
+    "time": "10:00 AM – 5:00 PM",
+    "location": "Vidya University Innovation Hub",
+    "image": "/images/startups/Innovation Bootcamp.jpg"
+  },
+  {
+    "slug": "ai-hackathon-nov-2025",
+    "title": "AI Hackathon — November 2025",
+    "excerpt": "24 hours to build with AI and ship something real.",
+    "description": "Form teams, ideate, and prototype AI-powered solutions with mentors and prizes.",
+    "date": "2025-11-20",
+    "time": "9:00 AM – 9:00 AM",
+    "location": "Main Auditorium",
+    "image": "/images/startups/Hackathon.jpg"
+  },
+  {
+    "slug": "demo-day-dec-2025",
+    "title": "VSIE Demo Day — December 2025",
+    "excerpt": "Our cohort showcases their startups to investors and partners.",
+    "description": "Cheer on the latest cohort as they present progress and pitch.",
+    "date": "2025-12-10",
+    "time": "4:00 PM – 7:00 PM",
+    "location": "Conference Hall",
+    "image": "/images/startups/Expo.jpg"
+  }
+]

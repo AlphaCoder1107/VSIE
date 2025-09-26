@@ -1,0 +1,41 @@
+[
+  {
+    "slug": "freshbyte",
+    "name": "FreshByte",
+    "tagline": "Smart cafeteria with zero waste",
+    "excerpt": "IoT-powered smart food management for campuses.",
+    "description": "FreshByte reduces food waste in cafeterias using predictive analytics and smart dispensing.",
+    "sector": "IoT / Sustainability",
+    "stage": "Seed",
+    "cohort": "2025 Spring",
+    "website": "https://example.com",
+    "logo": "/images/startups/freshbyte-logo.svg",
+  "image": "/images/startups/freshbyte-hero.svg"
+  },
+  {
+    "slug": "campusai",
+    "name": "CampusAI",
+    "tagline": "AI assistant for student success",
+    "excerpt": "Personalized study plans and campus services, AI-powered.",
+    "description": "CampusAI helps students stay on track with assignments and connects them to resources.",
+    "sector": "AI / EdTech",
+    "stage": "Pre-seed",
+    "cohort": "2025 Summer",
+    "website": "https://example.com",
+    "logo": "/images/startups/campusai-logo.svg",
+  "image": "/images/startups/campusai-hero.svg"
+  },
+  {
+    "slug": "agrivision",
+    "name": "AgriVision",
+    "tagline": "Computer vision for crop health",
+    "excerpt": "Affordable crop intelligence for small farms.",
+    "description": "AgriVision uses low-cost vision hardware and models to detect pests and disease early.",
+    "sector": "AgriTech / CV",
+    "stage": "MVP",
+    "cohort": "2025 Spring",
+    "website": "https://example.com",
+    "logo": "/images/startups/agrivision-logo.svg",
+  "image": "/images/startups/agrivision-hero.svg"
+  }
+]
