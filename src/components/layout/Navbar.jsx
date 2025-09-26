@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { assetUrl } from '@/lib/url'
 import { useEffect, useState } from 'react'
 import { Disclosure } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
@@ -29,10 +30,10 @@ export default function Navbar() {
               <div className="flex flex-1 items-center justify-start">
                 <Link href="/" className="flex items-center gap-3" aria-label="VSIE Home">
                   <img
-                    src="/images/hero/logo.png"
+                    src={assetUrl('/images/hero/logo.png')}
                     onError={(e) => {
                       if (e.currentTarget.getAttribute('data-fallback') === 'true') return
-                      e.currentTarget.src = '/images/hero/logo.svg'
+                      e.currentTarget.src = assetUrl('/images/hero/logo.svg')
                       e.currentTarget.setAttribute('data-fallback', 'true')
                     }}
                     alt="VSIE logo"

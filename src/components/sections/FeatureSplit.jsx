@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { assetUrl } from '@/lib/url'
 
 export default function FeatureSplit() {
   return (
@@ -16,7 +17,7 @@ export default function FeatureSplit() {
         </div>
         <div className="relative lg:col-span-7">
           <div className="rounded-2xl bg-vsie-800/60 border border-white/10 p-3 shadow-lg">
-            <Image src="/images/mockups/dashboard.svg" alt="VSIE dashboard mockup" width={1200} height={800} className="rounded-xl" />
+            <Image src={assetUrl('/images/mockups/dashboard.svg')} alt="VSIE dashboard mockup" width={1200} height={800} className="rounded-xl" />
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { assetUrl } from '@/lib/url'
 
 export default function Footer() {
   return (
@@ -7,10 +8,10 @@ export default function Footer() {
         <div>
           <div className="flex items-center gap-3">
             <img
-              src="/images/hero/logo.png"
+              src={assetUrl('/images/hero/logo.png')}
               onError={(e) => {
                 if (e.currentTarget.getAttribute('data-fallback') === 'true') return
-                e.currentTarget.src = '/images/hero/logo.svg'
+                e.currentTarget.src = assetUrl('/images/hero/logo.svg')
                 e.currentTarget.setAttribute('data-fallback', 'true')
               }}
               alt="VSIE logo"

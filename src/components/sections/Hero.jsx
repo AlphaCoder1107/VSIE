@@ -1,8 +1,9 @@
 import Link from 'next/link'
+import { assetUrl } from '@/lib/url'
 
 export default function Hero() {
   return (
-    <header className="relative bg-cover bg-center" style={{ backgroundImage: "url('/images/hero/hero.svg')" }}>
+    <header className="relative bg-cover bg-center" style={{ backgroundImage: `url(${assetUrl('/images/hero/hero.svg')})` }}>
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/40" aria-hidden></div>
   <div className="container mx-auto px-6 md:px-12 py-28 text-center relative z-10">
   <p className="inline-block mb-4 text-vsie-accent font-semibold text-xl md:text-2xl lg:text-3xl px-3 py-1 rounded-full bg-black/30 ring-1 ring-white/10 backdrop-blur-sm drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]">VSIE at Vidya University</p>

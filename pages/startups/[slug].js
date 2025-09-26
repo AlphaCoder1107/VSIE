@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Image from 'next/image'
+import { assetUrl } from '@/lib/url'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { getStartupSlugs, getStartupBySlug } from '@/lib/data'
@@ -19,7 +20,7 @@ export default function StartupDetail({ startup }) {
             <article className="lg:col-span-8">
               <div className="flex items-center gap-4">
                 {startup.logo && (
-                  <Image src={startup.logo} alt={`${startup.name} logo`} width={64} height={64} className="rounded-lg" />
+                  <Image src={assetUrl(startup.logo)} alt={`${startup.name} logo`} width={64} height={64} className="rounded-lg" />
                 )}
                 <div>
                   <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{startup.name}</h1>
@@ -31,7 +32,7 @@ export default function StartupDetail({ startup }) {
               </div>
               {startup.image && (
                 <div className="mt-8 rounded-2xl overflow-hidden border border-white/10">
-                  <Image src={startup.image} alt={`${startup.name} demo`} width={1200} height={630} className="w-full h-auto" />
+                  <Image src={assetUrl(startup.image)} alt={`${startup.name} demo`} width={1200} height={630} className="w-full h-auto" />
                 </div>
               )}
             </article>

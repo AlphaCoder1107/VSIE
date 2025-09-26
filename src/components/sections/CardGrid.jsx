@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { assetUrl } from '@/lib/url'
 
 function Card({ item, type }) {
   const href = type === 'events' ? `/events/${item.slug}` : `/startups/${item.slug}`
@@ -7,7 +8,7 @@ function Card({ item, type }) {
     <Link href={href} className="group rounded-2xl bg-vsie-800/60 border border-white/10 p-5 hover:bg-white/5 transition block">
       {item.image && (
         <div className="rounded-xl overflow-hidden border border-white/5 aspect-[16/9]">
-          <Image src={item.image} alt={item.title || item.name} width={800} height={450} className="w-full h-full object-cover group-hover:scale-[1.02] transition" />
+          <Image src={assetUrl(item.image)} alt={item.title || item.name} width={800} height={450} className="w-full h-full object-cover group-hover:scale-[1.02] transition" />
         </div>
       )}
       <div className="mt-4">

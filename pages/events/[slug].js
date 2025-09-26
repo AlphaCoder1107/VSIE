@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Image from 'next/image'
+import { assetUrl } from '@/lib/url'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { getEventSlugs, getEventBySlug } from '@/lib/data'
@@ -20,7 +21,7 @@ export default function EventDetail({ event }) {
               <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{event.title}</h1>
               <p className="mt-3 text-vsie-muted">{event.date} • {event.location}</p>
               <div className="mt-8 rounded-2xl overflow-hidden border border-white/10">
-                <Image src={event.image} alt="Event cover" width={1200} height={630} className="w-full h-auto" />
+                <Image src={assetUrl(event.image)} alt="Event cover" width={1200} height={630} className="w-full h-auto" />
               </div>
               <div className="prose prose-invert mt-8 max-w-none">
                 <p>{event.description}</p>
