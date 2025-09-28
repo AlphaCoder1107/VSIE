@@ -3,7 +3,8 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const RECAPTCHA_SECRET = Deno.env.get('RECAPTCHA_SECRET')
+const RECAPTCHA_SECRET = (globalThis as any).Deno?.env.get('RECAPTCHA_SECRET')
+const MIN_SCORE = Number(((globalThis as any).Deno?.env.get('RECAPTCHA_MIN_SCORE')) ?? '0.5')
 
 async function verifyToken(token: string) {
   if (!RECAPTCHA_SECRET) return { success: false, error: 'missing-secret' }
@@ -32,16 +33,16 @@ function json(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), { ...init, headers })
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return json({ ok: true })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 })
   try {
     const { token } = await req.json().catch(() => ({}))
     if (!token) return json({ success: false, error: 'missing-token' }, { status: 400 })
     const result = await verifyToken(token)
-    // Optional: enforce a minimum score threshold, e.g., 0.5
-    const success = Boolean(result?.success) && (typeof result?.score !== 'number' || result.score >= 0.5)
-    return json({ success, score: result?.score ?? null })
+  // Enforce a minimum score threshold (configurable via RECAPTCHA_MIN_SCORE)
+  const success = Boolean(result?.success) && (typeof result?.score !== 'number' || result.score >= MIN_SCORE)
+  return json({ success, score: result?.score ?? null, threshold: MIN_SCORE })
   } catch (e) {
     return json({ success: false, error: String(e) }, { status: 500 })
   }

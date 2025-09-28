@@ -478,6 +478,11 @@ export default function Apply() {
               </div>
               {message && <p className="mt-4 text-sm text-vsie-muted">{message}</p>}
               <p className="mt-4 text-xs text-white/50">This form collects information to evaluate your application for VIC incubation. Sensitive identity documents should be masked where possible. For questions, contact vic@vidya.edu.</p>
+              {Boolean(recaptchaSiteKey) && (
+                <p className="mt-1 text-[11px] text-white/40">
+                  This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.
+                </p>
+              )}
             </form>
 
             <div className="mt-6 text-center text-sm text-white/60">
