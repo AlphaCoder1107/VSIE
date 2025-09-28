@@ -71,6 +71,7 @@ export default function Apply() {
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [recaptchaError, setRecaptchaError] = useState('')
   const [state, setState] = useState(empty)
   const { clearDraft } = useDraft(state, setState)
 
@@ -142,11 +143,13 @@ export default function Apply() {
     e.preventDefault()
     setSubmitting(true)
     setMessage('')
+    setRecaptchaError('')
     try {
       // 0) reCAPTCHA v3 verification (optional, but recommended)
       if (recaptchaSiteKey && typeof window !== 'undefined') {
         if (!window.grecaptcha) {
-          setMessage('reCAPTCHA is still loading. Please wait a moment and try again.')
+          setRecaptchaError('reCAPTCHA check failed, please retry in a moment.')
+          setMessage('')
           setSubmitting(false)
           return
         }
@@ -155,12 +158,11 @@ export default function Apply() {
         try {
           if (supabaseEnabled && supabase) {
             const { data: verify, error: vErr } = await supabase.functions.invoke('verify-recaptcha', { body: { token, action: 'apply_submit' } })
-            if (vErr || !verify?.success) {
-              throw new Error('reCAPTCHA verification failed')
-            }
+            if (vErr || !verify?.success) throw new Error('reCAPTCHA verification failed')
           }
         } catch (verr) {
-          setMessage('Verification failed. Please retry the form submission.')
+          setRecaptchaError('reCAPTCHA check failed, please retry.')
+          setMessage('')
           return
         }
       }
@@ -487,6 +489,9 @@ export default function Apply() {
                 <p className="mt-1 text-[11px] text-white/40">
                   This site is protected by reCAPTCHA (v3). We verify tokens server-side to prevent abuse. Google Privacy Policy and Terms of Service apply.
                 </p>
+              )}
+              {recaptchaError && (
+                <p className="mt-2 text-xs text-red-400">{recaptchaError}</p>
               )}
             </form>
 
