@@ -31,3 +31,24 @@ body {
 *:not(input):not(textarea):not([contenteditable="true"]) {
   caret-color: transparent;
 }
+
+/* Ensure caret and text are visible in form fields on dark backgrounds */
+input:not([type]),
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="number"],
+input[type="password"],
+textarea {
+  color: #fff;               /* readable text */
+  caret-color: var(--accent); /* visible blinking caret */
+}
+
+/* Softer placeholder for dark UI */
+input::placeholder,
+textarea::placeholder {
+  color: #cbd5e1; /* slate-300 */
+  opacity: 0.9;
+}

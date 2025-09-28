@@ -10,7 +10,7 @@ export default function Hero() {
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight">Launch college startups faster</h1>
         <p className="mt-6 text-lg text-vsie-muted max-w-2xl mx-auto">Programs, mentorship, funding access, and labs to help students and alumni build, validate, and scale their ventures.</p>
         <div className="mt-8 flex justify-center gap-4">
-          <Link href="#apply" className="rounded-xl px-6 py-3 bg-vsie-accent text-white font-semibold shadow hover:-translate-y-0.5 transition">Apply now</Link>
+          <Link href="/apply" className="rounded-xl px-6 py-3 bg-vsie-accent text-white font-semibold shadow hover:-translate-y-0.5 transition">Apply now</Link>
           <Link href="/events" className="rounded-xl px-6 py-3 border border-white/10 text-white/90 hover:bg-white/10 transition">View events →</Link>
         </div>
       </div>

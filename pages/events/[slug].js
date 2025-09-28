@@ -29,7 +29,7 @@ export default function EventDetail({ event }) {
             </article>
             <aside className="lg:col-span-4">
               <div className="sticky top-24 space-y-4 max-w-sm mx-auto w-full">
-                <a href="#" className="block text-center rounded-xl px-6 py-3 bg-vsie-accent text-white font-semibold shadow hover:-translate-y-0.5 transition">Register now</a>
+                <a href="/apply" className="block text-center rounded-xl px-6 py-3 bg-vsie-accent text-white font-semibold shadow hover:-translate-y-0.5 transition">Register now</a>
                 <div className="rounded-xl bg-vsie-800/60 border border-white/10 p-5">
                   <h3 className="font-semibold">Details</h3>
                   <ul className="mt-3 text-vsie-muted space-y-1">
