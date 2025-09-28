@@ -38,13 +38,30 @@ serve(async (req: Request) => {
     return json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { limit = 100, offset = 0 } = await req.json().catch(() => ({})) as { limit?: number; offset?: number }
+  const { limit = 100, offset = 0, query = '' } = await req.json().catch(() => ({})) as { limit?: number; offset?: number; query?: string }
 
-  const { data, error } = await supabaseAdmin
+  const safeLimit = Math.max(1, Math.min(1000, limit))
+  let builder = supabaseAdmin
     .from('applications')
     .select('id, created_at, application_code, startup_name, stage, founders')
     .order('created_at', { ascending: false })
-    .range(offset, offset + Math.max(0, Math.min(1000, limit)) - 1)
+
+  const q = String(query || '').trim()
+  if (q.length > 0) {
+    const isNum = /^\d+$/.test(q)
+    const like = `%${q}%`
+    // Search by code/startup/stage and optionally id exact
+    const orFilters = [
+      `application_code.ilike.${like}`,
+      `startup_name.ilike.${like}`,
+      `stage.ilike.${like}`,
+    ]
+    if (isNum) orFilters.push(`id.eq.${Number(q)}`)
+    builder = builder.or(orFilters.join(','))
+  }
+
+  const { data, error } = await builder
+    .range(offset, offset + safeLimit - 1)
 
   if (error) return json({ error: error.message }, { status: 500 })
   return json({ rows: data || [] })

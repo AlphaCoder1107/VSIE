@@ -12,6 +12,8 @@ export default function AdminHome() {
   const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [search, setSearch] = useState('')
+  const [debounced, setDebounced] = useState('')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
@@ -31,7 +33,7 @@ export default function AdminHome() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ limit: 100 })
+          body: JSON.stringify({ limit: 100, query: debounced })
         })
         const out = await res.json()
         if (!res.ok) throw new Error(out?.error || `Request failed (${res.status})`)
@@ -42,7 +44,13 @@ export default function AdminHome() {
       setLoading(false)
     }
     load()
-  }, [session])
+  }, [session, debounced])
+
+  // Debounce the search input to avoid spamming the function
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
 
   const signOut = async () => { await supabase.auth.signOut(); router.push('/admin/login') }
 
@@ -72,6 +80,20 @@ export default function AdminHome() {
               <p className="text-vsie-muted">Please <Link href="/admin/login" className="underline">log in</Link> to view applications.</p>
             ) : (
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 overflow-auto">
+                <div className="mb-4 flex items-center gap-2">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by code, startup, stage, or ID…"
+                    className="w-full md:w-80 rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-vsie-accent"
+                  />
+                  {search && (
+                    <button
+                      onClick={() => setSearch('')}
+                      className="px-3 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20"
+                    >Clear</button>
+                  )}
+                </div>
                 {loading ? (
                   <p className="text-vsie-muted">Loading applications…</p>
                 ) : (
