@@ -84,17 +84,23 @@ export default function AdminHome() {
                         <th className="py-2 pr-4">Startup</th>
                         <th className="py-2 pr-4">Stage</th>
                         <th className="py-2 pr-4">Founder</th>
+                        <th className="py-2 pr-4">Details</th>
                       </tr>
                     </thead>
                     <tbody>
                       {apps.map((a) => (
-                        <tr key={a.id} className="border-t border-white/10 hover:bg-white/5 cursor-pointer" onClick={() => router.push(`/admin/view?id=${a.id}`)}>
+                        <tr key={a.id} className="border-t border-white/10">
                           <td className="py-2 pr-4">{a.id}</td>
                           <td className="py-2 pr-4">{new Date(a.created_at).toLocaleString()}</td>
                           <td className="py-2 pr-4 font-mono">{a.application_code || '—'}</td>
                           <td className="py-2 pr-4">{a.startup_name}</td>
                           <td className="py-2 pr-4">{a.stage}</td>
                           <td className="py-2 pr-4">{Array.isArray(a.founders) && a.founders[0]?.name}</td>
+                          <td className="py-2 pr-4">
+                            <Link href={`/admin/view?id=${a.id}`} className="inline-flex items-center rounded-lg px-3 py-1.5 bg-vsie-accent text-white text-xs font-medium hover:opacity-90">
+                              View
+                            </Link>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
