@@ -149,7 +149,7 @@ export default function Apply() {
         const token = await window.grecaptcha.execute(recaptchaSiteKey, { action: 'apply_submit' })
         try {
           if (supabaseEnabled && supabase) {
-            const { data: verify, error: vErr } = await supabase.functions.invoke('verify-recaptcha', { body: { token } })
+            const { data: verify, error: vErr } = await supabase.functions.invoke('verify-recaptcha', { body: { token, action: 'apply_submit' } })
             if (vErr || !verify?.success) {
               throw new Error('reCAPTCHA verification failed')
             }
