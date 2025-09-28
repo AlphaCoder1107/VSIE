@@ -9,12 +9,12 @@ export default function StartupsPage({ startups }) {
   return (
     <>
       <Head>
-        <title>VSIE — Startups</title>
+  <title>VIC — Startups</title>
       </Head>
       <div className="min-h-screen bg-vsie-900">
         <Navbar />
         <main id="main" className="py-24">
-          <Section title="Startups" description="Companies incubated and accelerated by VSIE at Vidya University.">
+          <Section title="Startups" description="Companies incubated and accelerated by VIC at Vidya University.">
             <CardGrid items={startups} type="startups" />
           </Section>
         </main>

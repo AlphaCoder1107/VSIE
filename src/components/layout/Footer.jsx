@@ -14,13 +14,13 @@ export default function Footer() {
                 e.currentTarget.src = assetUrl('/images/hero/logo.svg')
                 e.currentTarget.setAttribute('data-fallback', 'true')
               }}
-              alt="VSIE logo"
+              alt="VIC logo"
               className="h-8 w-auto"
               height={32}
             />
-            <span className="sr-only">VSIE</span>
+            <span className="sr-only">VIC</span>
           </div>
-          <p className="mt-4 text-vsie-muted max-w-xs">Vidya Startup & Innovation Incubation Ecosystem at Vidya University.</p>
+          <p className="mt-4 text-vsie-muted max-w-xs">Vidya Innovation Centre at Vidya University.</p>
         </div>
         <div>
           <h4 className="font-semibold">Explore</h4>
@@ -46,7 +46,7 @@ export default function Footer() {
           </form>
         </div>
       </div>
-      <div className="border-t border-white/10 py-6 text-center text-sm text-vsie-muted">© {new Date().getFullYear()} VSIE — Vidya University. All rights reserved.</div>
+  <div className="border-t border-white/10 py-6 text-center text-sm text-vsie-muted">© {new Date().getFullYear()} VIC — Vidya University. All rights reserved.</div>
     </footer>
   )
 }

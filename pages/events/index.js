@@ -9,12 +9,12 @@ export default function EventsPage({ events }) {
   return (
     <>
       <Head>
-        <title>VSIE — Events</title>
+  <title>VIC — Events</title>
       </Head>
       <div className="min-h-screen bg-vsie-900">
         <Navbar />
         <main id="main" className="py-24">
-          <Section title="Events" description="Workshops, hackathons, and demo days organized by VSIE.">
+          <Section title="Events" description="Workshops, hackathons, and demo days organized by VIC.">
             <CardGrid items={events} type="events" />
           </Section>
         </main>

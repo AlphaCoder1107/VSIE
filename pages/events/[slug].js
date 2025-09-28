@@ -10,7 +10,7 @@ export default function EventDetail({ event }) {
   return (
     <>
       <Head>
-        <title>{event.title} — VSIE Events</title>
+  <title>{event.title} — VIC Events</title>
         <meta name="description" content={event.excerpt} />
       </Head>
       <div className="min-h-screen bg-vsie-900">

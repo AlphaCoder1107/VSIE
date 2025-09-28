@@ -1,4 +1,4 @@
-# VSIE — Vidya Startup & Innovation Incubation Ecosystem
+# VIC — Vidya Innovation Centre
 
 Modern, responsive landing site built with Next.js + Tailwind.
 

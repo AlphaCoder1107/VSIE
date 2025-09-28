@@ -28,7 +28,7 @@ export default function Navbar() {
           <div className="mx-auto max-w-7xl px-6 md:px-12">
             <div className="relative flex h-16 items-center justify-between">
               <div className="flex flex-1 items-center justify-start">
-                <Link href="/" className="flex items-center gap-3" aria-label="VSIE Home">
+                <Link href="/" className="flex items-center gap-3" aria-label="VIC Home">
                   <img
                     src={assetUrl('/images/hero/logo.png')}
                     onError={(e) => {
@@ -36,11 +36,11 @@ export default function Navbar() {
                       e.currentTarget.src = assetUrl('/images/hero/logo.svg')
                       e.currentTarget.setAttribute('data-fallback', 'true')
                     }}
-                    alt="VSIE logo"
+                    alt="VIC logo"
                     className="h-10 w-auto"
                     height={40}
                   />
-                  <span className="sr-only">VSIE</span>
+                  <span className="sr-only">VIC</span>
                 </Link>
               </div>
               <div className="hidden md:flex items-center gap-8 text-sm text-vsie-muted">

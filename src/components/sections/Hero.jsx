@@ -6,7 +6,7 @@ export default function Hero() {
     <header className="relative bg-cover bg-center" style={{ backgroundImage: `url(${assetUrl('/images/hero/hero.svg')})` }}>
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/40" aria-hidden></div>
   <div className="container mx-auto px-6 md:px-12 py-28 text-center relative z-10">
-  <p className="inline-block mb-4 text-vsie-accent font-semibold text-xl md:text-2xl lg:text-3xl px-3 py-1 rounded-full bg-black/30 ring-1 ring-white/10 backdrop-blur-sm drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]">VSIE at Vidya University</p>
+  <p className="inline-block mb-4 text-vsie-accent font-semibold text-xl md:text-2xl lg:text-3xl px-3 py-1 rounded-full bg-black/30 ring-1 ring-white/10 backdrop-blur-sm drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]">VIC at Vidya University</p>
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight">Launch college startups faster</h1>
         <p className="mt-6 text-lg text-vsie-muted max-w-2xl mx-auto">Programs, mentorship, funding access, and labs to help students and alumni build, validate, and scale their ventures.</p>
         <div className="mt-8 flex justify-center gap-4">

@@ -10,7 +10,7 @@ export default function StartupDetail({ startup }) {
   return (
     <>
       <Head>
-        <title>{startup.name} — VSIE Startup</title>
+  <title>{startup.name} — VIC Startup</title>
         <meta name="description" content={startup.excerpt} />
       </Head>
       <div className="min-h-screen bg-vsie-900">

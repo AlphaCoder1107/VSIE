@@ -8,7 +8,7 @@ export default function FeatureSplit() {
         <div className="lg:col-span-5">
           <p className="text-sm text-vsie-accent font-medium">Programs & Support</p>
           <h2 className="mt-2 text-3xl md:text-5xl font-bold tracking-tight">A better pathway from idea to impact</h2>
-          <p className="mt-4 text-vsie-muted">From ideation bootcamps to acceleration and investor connects, VSIE offers hands-on guidance at every stage.</p>
+          <p className="mt-4 text-vsie-muted">From ideation bootcamps to acceleration and investor connects, VIC offers hands-on guidance at every stage.</p>
           <ul className="mt-6 space-y-3 text-white/90">
             <li className="flex gap-3"><span className="text-vsie-accent">•</span> Mentor network of founders and alumni</li>
             <li className="flex gap-3"><span className="text-vsie-accent">•</span> Prototype labs and cloud credits</li>
