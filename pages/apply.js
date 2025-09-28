@@ -10,6 +10,7 @@ const DRAFT_KEY = 'vic-apply-draft'
 const feeAmount = Number(process.env.NEXT_PUBLIC_REG_FEE || 0)
 const formEndpoint = process.env.NEXT_PUBLIC_FORM_ENDPOINT || '' // e.g. https://your-api.example.com/api/incubation/apply
 const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY || ''
+const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''
 
 // Supabase (client-side) fallback configuration
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -106,6 +107,18 @@ export default function Apply() {
     document.body.appendChild(script)
   }, [])
 
+  // Load reCAPTCHA v3 script if site key present
+  useEffect(() => {
+    if (!recaptchaSiteKey) return
+    if (typeof window === 'undefined') return
+    if (document.getElementById('recaptcha-v3')) return
+    const script = document.createElement('script')
+    script.id = 'recaptcha-v3'
+    script.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(recaptchaSiteKey)}`
+    script.async = true
+    document.body.appendChild(script)
+  }, [])
+
   const handlePay = async () => {
     if (!razorpayKey) return
     // Client-only demo; production should verify server-side
@@ -130,6 +143,23 @@ export default function Apply() {
     setSubmitting(true)
     setMessage('')
     try {
+      // 0) reCAPTCHA v3 verification (optional)
+      if (recaptchaSiteKey && typeof window !== 'undefined' && window.grecaptcha) {
+        await new Promise((resolve) => window.grecaptcha.ready(resolve))
+        const token = await window.grecaptcha.execute(recaptchaSiteKey, { action: 'apply_submit' })
+        try {
+          if (supabaseEnabled && supabase) {
+            const { data: verify, error: vErr } = await supabase.functions.invoke('verify-recaptcha', { body: { token } })
+            if (vErr || !verify?.success) {
+              throw new Error('reCAPTCHA verification failed')
+            }
+          }
+        } catch (verr) {
+          setMessage('Verification failed. Please retry the form submission.')
+          return
+        }
+      }
+
       const { startup, founder, attachments, payment, consent } = state
 
       if (formEndpoint) {
