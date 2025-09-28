@@ -143,8 +143,13 @@ export default function Apply() {
     setSubmitting(true)
     setMessage('')
     try {
-      // 0) reCAPTCHA v3 verification (optional)
-      if (recaptchaSiteKey && typeof window !== 'undefined' && window.grecaptcha) {
+      // 0) reCAPTCHA v3 verification (optional, but recommended)
+      if (recaptchaSiteKey && typeof window !== 'undefined') {
+        if (!window.grecaptcha) {
+          setMessage('reCAPTCHA is still loading. Please wait a moment and try again.')
+          setSubmitting(false)
+          return
+        }
         await new Promise((resolve) => window.grecaptcha.ready(resolve))
         const token = await window.grecaptcha.execute(recaptchaSiteKey, { action: 'apply_submit' })
         try {
@@ -480,7 +485,7 @@ export default function Apply() {
               <p className="mt-4 text-xs text-white/50">This form collects information to evaluate your application for VIC incubation. Sensitive identity documents should be masked where possible. For questions, contact vic@vidya.edu.</p>
               {Boolean(recaptchaSiteKey) && (
                 <p className="mt-1 text-[11px] text-white/40">
-                  This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.
+                  This site is protected by reCAPTCHA (v3). We verify tokens server-side to prevent abuse. Google Privacy Policy and Terms of Service apply.
                 </p>
               )}
             </form>

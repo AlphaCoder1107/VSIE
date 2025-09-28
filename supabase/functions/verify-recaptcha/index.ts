@@ -5,6 +5,10 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const RECAPTCHA_SECRET = (globalThis as any).Deno?.env.get('RECAPTCHA_SECRET')
 const MIN_SCORE = Number(((globalThis as any).Deno?.env.get('RECAPTCHA_MIN_SCORE')) ?? '0.5')
+const ALLOWED_HOSTS: string[] = String(((globalThis as any).Deno?.env.get('RECAPTCHA_ALLOWED_HOSTS')) || '')
+  .split(',')
+  .map((s: string) => s.trim().toLowerCase())
+  .filter((s: string) => !!s)
 
 async function verifyToken(token: string) {
   if (!RECAPTCHA_SECRET) return { success: false, error: 'missing-secret' }
@@ -37,12 +41,27 @@ serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return json({ ok: true })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 })
   try {
-    const { token } = await req.json().catch(() => ({}))
+    const { token, action } = await req.json().catch(() => ({}))
     if (!token) return json({ success: false, error: 'missing-token' }, { status: 400 })
     const result = await verifyToken(token)
-  // Enforce a minimum score threshold (configurable via RECAPTCHA_MIN_SCORE)
-  const success = Boolean(result?.success) && (typeof result?.score !== 'number' || result.score >= MIN_SCORE)
-  return json({ success, score: result?.score ?? null, threshold: MIN_SCORE })
+    // Validate action (if provided by client) and hostname (if allowlist configured)
+    const scoreOk = (typeof result?.score !== 'number') || (result.score >= MIN_SCORE)
+    const actionOk = !action || (String(result?.action || '').toLowerCase() === String(action).toLowerCase())
+    const host = String(result?.hostname || '').toLowerCase()
+    const hostOk = (ALLOWED_HOSTS.length === 0) || ALLOWED_HOSTS.includes(host)
+    const success = Boolean(result?.success) && scoreOk && actionOk && hostOk
+    return json({
+      success,
+      score: result?.score ?? null,
+      threshold: MIN_SCORE,
+      action: result?.action ?? null,
+      hostname: host || null,
+      reasons: {
+        scoreOk,
+        actionOk,
+        hostOk
+      }
+    })
   } catch (e) {
     return json({ success: false, error: String(e) }, { status: 500 })
   }
