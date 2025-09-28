@@ -97,6 +97,44 @@ export default function AdminHome() {
     })
   }, [apps, search])
 
+  // Export helpers
+  const exportToXlsx = async () => {
+    if (!filtered.length) return
+    const XLSX = await import('xlsx')
+    const rows = filtered.map((a) => ({
+      ID: a.id,
+      Created: a.created_at ? new Date(a.created_at).toLocaleString() : '',
+      Code: a.application_code || '',
+      Startup: a.startup_name || '',
+      Stage: a.stage || '',
+      Founder: Array.isArray(a.founders) && a.founders[0]?.name ? a.founders[0].name : ''
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Applications')
+    const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12)
+    XLSX.writeFile(wb, `applications_${stamp}.xlsx`)
+  }
+
+  const exportToPdf = async () => {
+    if (!filtered.length) return
+    const { jsPDF } = await import('jspdf')
+    const autoTable = (await import('jspdf-autotable')).default
+    const doc = new jsPDF({ orientation: 'landscape' })
+    const head = [['ID', 'Created', 'Code', 'Startup', 'Stage', 'Founder']]
+    const body = filtered.map((a) => ([
+      String(a.id),
+      a.created_at ? new Date(a.created_at).toLocaleString() : '',
+      a.application_code || '',
+      a.startup_name || '',
+      a.stage || '',
+      (Array.isArray(a.founders) && a.founders[0]?.name) ? a.founders[0].name : ''
+    ]))
+    autoTable(doc, { head, body, styles: { fontSize: 8 }, headStyles: { fillColor: [40, 40, 40] } })
+    const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12)
+    doc.save(`applications_${stamp}.pdf`)
+  }
+
   const signOut = async () => { await supabase.auth.signOut(); router.push('/admin/login') }
 
   return (
@@ -125,7 +163,7 @@ export default function AdminHome() {
               <p className="text-vsie-muted">Please <Link href="/admin/login" className="underline">log in</Link> to view applications.</p>
             ) : (
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 overflow-auto">
-                <div className="mb-4 flex items-center gap-2">
+                <div className="mb-4 flex items-center gap-2 flex-wrap">
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -138,6 +176,20 @@ export default function AdminHome() {
                       className="px-3 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20"
                     >Clear</button>
                   )}
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      onClick={exportToXlsx}
+                      disabled={!filtered.length}
+                      className="px-3 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                      title={!filtered.length ? 'No data to export' : 'Export to Excel'}
+                    >Export Excel</button>
+                    <button
+                      onClick={exportToPdf}
+                      disabled={!filtered.length}
+                      className="px-3 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                      title={!filtered.length ? 'No data to export' : 'Export to PDF'}
+                    >Export PDF</button>
+                  </div>
                 </div>
                 {loading ? (
                   <p className="text-vsie-muted">Loading applications…</p>
