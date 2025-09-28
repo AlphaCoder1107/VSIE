@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -51,6 +51,33 @@ export default function AdminHome() {
     const t = setTimeout(() => setDebounced(search.trim()), 300)
     return () => clearTimeout(t)
   }, [search])
+
+  // Client-side filter as a fallback and for immediate UI feedback
+  const filtered = useMemo(() => {
+    const q = debounced.toLowerCase()
+    const qDigits = (debounced || '').replace(/\D/g, '')
+    if (!q) return apps
+    return apps.filter((a) => {
+      const norm = (s) => (s ?? '').toString().toLowerCase()
+      const digits = (s) => (s ?? '').toString().replace(/\D/g, '')
+      const code = norm(a.application_code)
+      const codeDigits = digits(a.application_code)
+      const startup = norm(a.startup_name)
+      const stage = norm(a.stage)
+      const idStr = String(a.id)
+      const foundersStr = Array.isArray(a.founders)
+        ? norm(a.founders.map(f => [f?.name, f?.email, f?.phone].filter(Boolean).join(' ')).join(' '))
+        : ''
+      return (
+        code.includes(q) ||
+        startup.includes(q) ||
+        stage.includes(q) ||
+        foundersStr.includes(q) ||
+        idStr.includes(debounced.trim()) ||
+        (!!qDigits && codeDigits.includes(qDigits))
+      )
+    })
+  }, [apps, debounced])
 
   const signOut = async () => { await supabase.auth.signOut(); router.push('/admin/login') }
 
@@ -110,7 +137,7 @@ export default function AdminHome() {
                       </tr>
                     </thead>
                     <tbody>
-                      {apps.map((a) => (
+                      {filtered.map((a) => (
                         <tr key={a.id} className="border-t border-white/10">
                           <td className="py-2 pr-4">{a.id}</td>
                           <td className="py-2 pr-4">{new Date(a.created_at).toLocaleString()}</td>
