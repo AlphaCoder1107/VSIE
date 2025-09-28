@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { supabase } from '@/lib/supabaseClient'
 
 export default function AdminHome() {
+  const router = useRouter()
   const [session, setSession] = useState(null)
   const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
@@ -42,7 +44,7 @@ export default function AdminHome() {
     load()
   }, [session])
 
-  const signOut = async () => { await supabase.auth.signOut(); window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/admin/login` }
+  const signOut = async () => { await supabase.auth.signOut(); router.push('/admin/login') }
 
   return (
     <>
@@ -54,14 +56,18 @@ export default function AdminHome() {
         <Navbar />
         <main className="py-24">
           <div className="container max-w-5xl">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-2">
               <h1 className="text-3xl font-bold">Admin Panel</h1>
               {session ? (
-                <button onClick={signOut} className="rounded-xl px-4 py-2 bg-white/10 text-white">Sign out</button>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-white/70">Signed in as {session?.user?.email}</span>
+                  <button onClick={signOut} className="rounded-xl px-4 py-2 bg-white/10 text-white">Sign out</button>
+                </div>
               ) : (
                 <Link href="/admin/login" className="rounded-xl px-4 py-2 bg-vsie-accent text-white">Login</Link>
               )}
             </div>
+            <p className="mb-6 text-xs text-white/50">Only emails in the ADMIN_EMAILS function secret can access data.</p>
             {!session ? (
               <p className="text-vsie-muted">Please <Link href="/admin/login" className="underline">log in</Link> to view applications.</p>
             ) : (
@@ -82,7 +88,7 @@ export default function AdminHome() {
                     </thead>
                     <tbody>
                       {apps.map((a) => (
-                        <tr key={a.id} className="border-t border-white/10">
+                        <tr key={a.id} className="border-t border-white/10 hover:bg-white/5 cursor-pointer" onClick={() => router.push(`/admin/view?id=${a.id}`)}>
                           <td className="py-2 pr-4">{a.id}</td>
                           <td className="py-2 pr-4">{new Date(a.created_at).toLocaleString()}</td>
                           <td className="py-2 pr-4 font-mono">{a.application_code || '—'}</td>
@@ -94,7 +100,12 @@ export default function AdminHome() {
                     </tbody>
                   </table>
                 )}
-                {message && <p className="mt-3 text-sm text-red-400">{message}</p>}
+                {message && (
+                  <p className="mt-3 text-sm text-red-400">
+                    {message}
+                    {String(message).toLowerCase().includes('forbidden') && ' — Your email is not included in ADMIN_EMAILS. Add it to the Edge Function secrets and redeploy.'}
+                  </p>
+                )}
               </div>
             )}
           </div>
