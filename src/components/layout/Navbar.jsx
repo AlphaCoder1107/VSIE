@@ -8,7 +8,8 @@ const nav = [
   { name: 'Home', href: '/' },
   { name: 'Startups', href: '/startups' },
   { name: 'Events', href: '/events' },
-  { name: 'About', href: '#about' }
+  { name: 'About', href: '#about' },
+  { name: 'Admin', href: '/admin/login' }
 ]
 
 export default function Navbar() {
