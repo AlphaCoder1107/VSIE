@@ -54,12 +54,19 @@ export default function AdminHome() {
 
   // Client-side filter as a fallback and for immediate UI feedback
   const filtered = useMemo(() => {
-    const q = debounced.toLowerCase()
-    const qDigits = (debounced || '').replace(/\D/g, '')
-    if (!q) return apps
+    const input = (search || '').trim()
+    if (!input) return apps
+    const tokens = input
+      .toLowerCase()
+      .split(/[^a-z0-9]+/i)
+      .filter(Boolean)
+    const hasTokens = tokens.length > 0
+    const numberToken = input.replace(/\D/g, '') // full digits in the input
+
     return apps.filter((a) => {
       const norm = (s) => (s ?? '').toString().toLowerCase()
       const digits = (s) => (s ?? '').toString().replace(/\D/g, '')
+
       const code = norm(a.application_code)
       const codeDigits = digits(a.application_code)
       const startup = norm(a.startup_name)
@@ -68,16 +75,27 @@ export default function AdminHome() {
       const foundersStr = Array.isArray(a.founders)
         ? norm(a.founders.map(f => [f?.name, f?.email, f?.phone].filter(Boolean).join(' ')).join(' '))
         : ''
-      return (
-        code.includes(q) ||
-        startup.includes(q) ||
-        stage.includes(q) ||
-        foundersStr.includes(q) ||
-        idStr.includes(debounced.trim()) ||
-        (!!qDigits && codeDigits.includes(qDigits))
-      )
+
+      // Each token must match somewhere (AND semantics)
+      const allTokensMatch = tokens.every((t) => {
+        const isNum = /^\d+$/.test(t)
+        if (isNum) {
+          return idStr.includes(t) || codeDigits.includes(t)
+        }
+        return (
+          code.includes(t) ||
+          startup.includes(t) ||
+          stage.includes(t) ||
+          foundersStr.includes(t)
+        )
+      })
+
+      // Additionally, if the input contains digits, allow a loose digits match against code
+      const looseDigitsOk = numberToken.length >= 2 ? codeDigits.includes(numberToken) || numberToken.includes(codeDigits) : true
+
+      return (!hasTokens || allTokensMatch) && looseDigitsOk
     })
-  }, [apps, debounced])
+  }, [apps, search])
 
   const signOut = async () => { await supabase.auth.signOut(); router.push('/admin/login') }
 
@@ -137,6 +155,11 @@ export default function AdminHome() {
                       </tr>
                     </thead>
                     <tbody>
+                      {filtered.length === 0 && (
+                        <tr>
+                          <td className="py-6 text-center text-white/60" colSpan={7}>No results found.</td>
+                        </tr>
+                      )}
                       {filtered.map((a) => (
                         <tr key={a.id} className="border-t border-white/10">
                           <td className="py-2 pr-4">{a.id}</td>
