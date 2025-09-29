@@ -147,7 +147,7 @@ export default function EventDetail({ event }) {
                 <label className="text-sm text-black">Name</label>
                 <input
                   required
-                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 !text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                   value={form.name}
                   onChange={(e)=>setForm(f=>({...f, name:e.target.value}))}
                 />
@@ -158,7 +158,7 @@ export default function EventDetail({ event }) {
                   <input
                     type="email"
                     required
-                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 !text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.email}
                     onChange={(e)=>setForm(f=>({...f, email:e.target.value}))}
                   />
@@ -166,7 +166,7 @@ export default function EventDetail({ event }) {
                 <div>
                   <label className="text-sm text-black">Phone</label>
                   <input
-                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 !text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.phone}
                     onChange={(e)=>setForm(f=>({...f, phone:e.target.value}))}
                   />
@@ -176,7 +176,7 @@ export default function EventDetail({ event }) {
                 <div>
                   <label className="text-sm text-black">College</label>
                   <input
-                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 !text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.college}
                     onChange={(e)=>setForm(f=>({...f, college:e.target.value}))}
                   />
@@ -184,7 +184,7 @@ export default function EventDetail({ event }) {
                 <div>
                   <label className="text-sm text-black">Year</label>
                   <input
-                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 !text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.year}
                     onChange={(e)=>setForm(f=>({...f, year:e.target.value}))}
                   />
