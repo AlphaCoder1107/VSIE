@@ -82,13 +82,24 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
     upsert: true
   })
   if (uploadErr) throw uploadErr
-  const { publicURL } = supabaseAdmin.storage.from(STORAGE_BUCKET).getPublicUrl(filePath)
+  // Prefer signed URL (works with private buckets). Fallback to public URL if signing fails.
+  let qrUrl: string | undefined
+  try {
+    const { data: signed } = await supabaseAdmin.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(filePath, 60 * 60 * 24 * 30) // 30 days
+    if (signed?.signedUrl) qrUrl = signed.signedUrl
+  } catch (_) {}
+  if (!qrUrl) {
+    const { publicURL } = supabaseAdmin.storage.from(STORAGE_BUCKET).getPublicUrl(filePath)
+    qrUrl = publicURL
+  }
 
   // 3) Update DB with QR URL and generated flags (if columns exist)
   try {
     await supabaseAdmin
       .from('seminar_registrations')
-      .update({ qr_url: publicURL, qr_generated: true, qr_generated_at: new Date().toISOString() })
+      .update({ qr_url: qrUrl, qr_generated: true, qr_generated_at: new Date().toISOString() })
       .eq('id', id)
   } catch (_) {
     // ignore if columns not present
@@ -102,7 +113,7 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
       <p>Hi ${student_name || 'Participant'},</p>
       <p>Thanks for registering for <b>${event_slug}</b>.</p>
       <p>Your registration code: <b>${code}</b></p>
-      <p><img src="${publicURL}" alt="QR" style="max-width:320px"/></p>
+      <p><img src="${qrUrl}" alt="QR" style="max-width:320px"/></p>
       <p>Present this QR at the entry. Keep this email handy on event day.</p>
     `
     const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
