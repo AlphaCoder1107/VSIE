@@ -140,33 +140,33 @@ export default function EventDetail({ event }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white text-black rounded-xl w-full max-w-lg p-5 relative">
             <button onClick={() => setShowModal(false)} className="absolute right-3 top-3 text-black/60">✕</button>
-            <h3 className="text-xl font-semibold text-gray-900">Seminar Registration (₹10)</h3>
+            <h3 className="text-xl font-semibold text-black">Seminar Registration (₹10)</h3>
             <form onSubmit={onSubmit} className="mt-3 space-y-3">
               <input type="hidden" value={event.slug} />
               <div>
-                <label className="text-sm text-gray-800">Name</label>
+                <label className="text-sm text-black">Name</label>
                 <input
                   required
-                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                   value={form.name}
                   onChange={(e)=>setForm(f=>({...f, name:e.target.value}))}
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-gray-800">Email</label>
+                  <label className="text-sm text-black">Email</label>
                   <input
                     type="email"
                     required
-                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.email}
                     onChange={(e)=>setForm(f=>({...f, email:e.target.value}))}
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-800">Phone</label>
+                  <label className="text-sm text-black">Phone</label>
                   <input
-                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.phone}
                     onChange={(e)=>setForm(f=>({...f, phone:e.target.value}))}
                   />
@@ -174,17 +174,17 @@ export default function EventDetail({ event }) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-gray-800">College</label>
+                  <label className="text-sm text-black">College</label>
                   <input
-                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.college}
                     onChange={(e)=>setForm(f=>({...f, college:e.target.value}))}
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-800">Year</label>
+                  <label className="text-sm text-black">Year</label>
                   <input
-                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.year}
                     onChange={(e)=>setForm(f=>({...f, year:e.target.value}))}
                   />
@@ -194,7 +194,7 @@ export default function EventDetail({ event }) {
                 <button type="button" onClick={()=>setShowModal(false)} className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">Cancel</button>
                 <button type="submit" disabled={!canSubmit || submitting} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">{submitting ? 'Processing…' : 'Pay ₹10 & Register'}</button>
               </div>
-              {status && <p className="text-sm text-gray-800 mt-2">{status}</p>}
+              {status && <p className="text-sm text-black mt-2">{status}</p>}
             </form>
           </div>
         </div>
