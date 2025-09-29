@@ -4,11 +4,18 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.4'
+// QR generation (Node lib via esm.sh works in Deno with polyfills)
+import QRCode from 'https://esm.sh/qrcode@1.5.3'
 
 const SUPABASE_URL = (globalThis as any).Deno?.env.get('SUPABASE_URL') as string
 const SERVICE_ROLE_KEY = (globalThis as any).Deno?.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
 const RAZORPAY_KEY_ID = (globalThis as any).Deno?.env.get('RAZORPAY_KEY_ID') as string
 const RAZORPAY_KEY_SECRET = (globalThis as any).Deno?.env.get('RAZORPAY_KEY_SECRET') as string
+// New: QR/Email env
+const STORAGE_BUCKET = (globalThis as any).Deno?.env.get('STORAGE_BUCKET') as string | undefined
+const SENDGRID_API_KEY = (globalThis as any).Deno?.env.get('SENDGRID_API_KEY') as string | undefined
+const EMAIL_FROM = (globalThis as any).Deno?.env.get('EMAIL_FROM') as string | undefined
+const VERIFY_BASE_URL = (globalThis as any).Deno?.env.get('VERIFY_BASE_URL') as string | undefined
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
@@ -33,6 +40,103 @@ async function hmacSha256Hex(key: string, data: string) {
   const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(data))
   const bytes = new Uint8Array(sigBuf as ArrayBuffer)
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+function buildQrPayload(row: any) {
+  // Prefer a verification URL payload for gate scanning simplicity
+  if (VERIFY_BASE_URL) {
+    const url = new URL(VERIFY_BASE_URL)
+    url.searchParams.set('code', String(row.registration_code))
+    url.searchParams.set('id', String(row.id))
+    return url.toString()
+  }
+  // Fallback: compact JSON payload
+  return JSON.stringify({ id: row.id, code: row.registration_code, name: row.student_name, email: row.student_email })
+}
+
+function sanitizeFileName(s: string) {
+  return String(s || '').replace(/[^a-z0-9-_\.]/gi, '-')
+}
+
+async function dataUrlToBytes(dataUrl: string): Promise<Uint8Array> {
+  const base64 = dataUrl.split(',')[1] || ''
+  const bin = atob(base64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return bytes
+}
+
+async function uploadQrAndEmail({ id, registration_code, student_email, student_name, event_slug }: any) {
+  if (!STORAGE_BUCKET) return { uploaded: false, emailed: false }
+  // 1) Build QR payload and render to PNG data URL
+  const payload = buildQrPayload({ id, registration_code, student_name, student_email })
+  const dataUrl = await QRCode.toDataURL(payload, { type: 'image/png', width: 320 })
+  const pngBytes = await dataUrlToBytes(dataUrl)
+
+  // 2) Upload to Supabase Storage
+  const year = new Date().getFullYear()
+  const code = registration_code || `reg-${id}`
+  const filePath = `registrations/${year}/${sanitizeFileName(code)}.png`
+  const { error: uploadErr } = await supabaseAdmin.storage.from(STORAGE_BUCKET).upload(filePath, pngBytes, {
+    contentType: 'image/png',
+    upsert: true
+  })
+  if (uploadErr) throw uploadErr
+  const { publicURL } = supabaseAdmin.storage.from(STORAGE_BUCKET).getPublicUrl(filePath)
+
+  // 3) Update DB with QR URL and generated flags (if columns exist)
+  try {
+    await supabaseAdmin
+      .from('seminar_registrations')
+      .update({ qr_url: publicURL, qr_generated: true, qr_generated_at: new Date().toISOString() })
+      .eq('id', id)
+  } catch (_) {
+    // ignore if columns not present
+  }
+
+  // 4) Send email via SendGrid (optional)
+  let emailed = false
+  if (SENDGRID_API_KEY && EMAIL_FROM && student_email) {
+    const subject = `Your VIC Ticket — ${code}`
+    const html = `
+      <p>Hi ${student_name || 'Participant'},</p>
+      <p>Thanks for registering for <b>${event_slug}</b>.</p>
+      <p>Your registration code: <b>${code}</b></p>
+      <p><img src="${publicURL}" alt="QR" style="max-width:320px"/></p>
+      <p>Present this QR at the entry. Keep this email handy on event day.</p>
+    `
+    const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${SENDGRID_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: student_email }] }],
+        from: { email: EMAIL_FROM },
+        subject,
+        content: [{ type: 'text/html', value: html }],
+        attachments: [{
+          content: btoa(String.fromCharCode(...pngBytes)),
+          filename: `${sanitizeFileName(code)}.png`,
+          type: 'image/png',
+          disposition: 'attachment'
+        }]
+      })
+    })
+    emailed = resp.ok
+    if (!resp.ok) {
+      // Optionally track email failed count
+      try {
+        await supabaseAdmin
+          .from('seminar_registrations')
+          .update({ email_failed_count: (1) })
+          .eq('id', id)
+      } catch (_) {}
+    }
+  }
+
+  return { uploaded: true, emailed }
 }
 
 serve(async (req: Request) => {
@@ -86,6 +190,20 @@ serve(async (req: Request) => {
       .single()
 
     if (error) return json({ error: 'DB insert failed', details: error.message }, { status: 500 })
+
+    // 4) Generate QR, upload, and send email (best-effort; do not fail payment if this fails)
+    try {
+      await uploadQrAndEmail({
+        id: data?.id,
+        registration_code: data?.registration_code,
+        student_email: insertPayload.student_email,
+        student_name: insertPayload.student_name,
+        event_slug: insertPayload.event_slug
+      })
+    } catch (postErr) {
+      // log and continue; payment is already successful and row inserted
+      console.error('post-process failed', postErr)
+    }
 
     return json({ ok: true, registration_code: data?.registration_code, id: data?.id })
   } catch (err: any) {
