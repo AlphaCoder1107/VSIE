@@ -21,6 +21,11 @@ function Card({ item, type }) {
             <span>{item.sector} • {item.stage}</span>
           )}
         </div>
+        {type === 'events' && (
+          <div className="mt-4">
+            <Link href={`/events/${item.slug}#register`} className="inline-block rounded-lg px-3 py-1.5 bg-vsie-accent text-white text-sm">Register now</Link>
+          </div>
+        )}
       </div>
     </Link>
   )

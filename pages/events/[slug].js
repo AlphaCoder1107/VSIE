@@ -1,12 +1,103 @@
 import Head from 'next/head'
 import Image from 'next/image'
+import { useEffect, useMemo, useState } from 'react'
 import { assetUrl } from '@/lib/url'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { getEventSlugs, getEventBySlug } from '@/lib/data'
+import { supabase } from '@/lib/supabaseClient'
 
 export default function EventDetail({ event }) {
   if (!event) return null
+
+  const [showModal, setShowModal] = useState(false)
+  const [form, setForm] = useState({ name: '', email: '', phone: '', college: '', year: '' })
+  const [status, setStatus] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  // Load Razorpay script on client
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.Razorpay) return
+    const s = document.createElement('script')
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    s.async = true
+    document.body.appendChild(s)
+  }, [])
+
+  // Deep link: auto-open on #register
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash === '#register') setShowModal(true)
+  }, [])
+
+  const canSubmit = useMemo(() => {
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+    const nameOk = form.name.trim().length >= 2
+    return nameOk && emailOk
+  }, [form])
+
+  async function openCheckout() {
+    setStatus('Creating order...')
+    const { data, error } = await supabase.functions.invoke('seminar-create-order', {
+      body: { amount_paise: 1000, receipt: `sem-reg-${Date.now()}` }
+    })
+    if (error || !data?.order || !data?.key_id) {
+      setStatus('Failed to create order. Please try again.')
+      return null
+    }
+    setStatus('Opening payment window...')
+    return data
+  }
+
+  async function onSubmit(e) {
+    e.preventDefault()
+    if (!canSubmit || submitting) return
+    setSubmitting(true)
+    setStatus('')
+    try {
+      const created = await openCheckout()
+      if (!created) return
+      const { order, key_id } = created
+
+      const options = {
+        key: key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'VIC Seminar',
+        description: `Entry fee for ${event.slug}`,
+        order_id: order.id,
+        prefill: { name: form.name, email: form.email, contact: form.phone },
+        handler: async (resp) => {
+          setStatus('Verifying payment...')
+          const { data: verify, error: vErr } = await supabase.functions.invoke('seminar-verify-payment', {
+            body: {
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_signature: resp.razorpay_signature,
+              student: { ...form, event_slug: event.slug }
+            }
+          })
+          if (vErr || !verify?.ok) {
+            setStatus('Payment verification failed. Please contact us if you were charged.')
+            return
+          }
+          setStatus(`Payment successful! Your entry no: ${verify.registration_code}`)
+          setTimeout(() => setShowModal(false), 3000)
+        },
+        modal: { ondismiss: () => setStatus('Payment window closed.') }
+      }
+
+      // @ts-ignore
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+    } catch (err) {
+      console.error(err)
+      setStatus('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
   return (
     <>
       <Head>
@@ -29,7 +120,7 @@ export default function EventDetail({ event }) {
             </article>
             <aside className="lg:col-span-4">
               <div className="sticky top-24 space-y-4 max-w-sm mx-auto w-full">
-                <a href="/apply" className="block text-center rounded-xl px-6 py-3 bg-vsie-accent text-white font-semibold shadow hover:-translate-y-0.5 transition">Register now</a>
+                <button onClick={() => { setShowModal(true); setStatus('') }} className="block w-full text-center rounded-xl px-6 py-3 bg-vsie-accent text-white font-semibold shadow hover:-translate-y-0.5 transition">Register now</button>
                 <div className="rounded-xl bg-vsie-800/60 border border-white/10 p-5">
                   <h3 className="font-semibold">Details</h3>
                   <ul className="mt-3 text-vsie-muted space-y-1">
@@ -44,6 +135,47 @@ export default function EventDetail({ event }) {
         </main>
         <Footer />
       </div>
+      {/* Registration Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white text-black rounded-xl w-full max-w-lg p-5 relative">
+            <button onClick={() => setShowModal(false)} className="absolute right-3 top-3 text-black/60">✕</button>
+            <h3 className="text-xl font-semibold">Seminar Registration (₹10)</h3>
+            <form onSubmit={onSubmit} className="mt-3 space-y-3">
+              <input type="hidden" value={event.slug} />
+              <div>
+                <label className="text-sm">Name</label>
+                <input required className="mt-1 w-full border rounded-md px-3 py-2" value={form.name} onChange={(e)=>setForm(f=>({...f, name:e.target.value}))} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm">Email</label>
+                  <input type="email" required className="mt-1 w-full border rounded-md px-3 py-2" value={form.email} onChange={(e)=>setForm(f=>({...f, email:e.target.value}))} />
+                </div>
+                <div>
+                  <label className="text-sm">Phone</label>
+                  <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.phone} onChange={(e)=>setForm(f=>({...f, phone:e.target.value}))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm">College</label>
+                  <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.college} onChange={(e)=>setForm(f=>({...f, college:e.target.value}))} />
+                </div>
+                <div>
+                  <label className="text-sm">Year</label>
+                  <input className="mt-1 w-full border rounded-md px-3 py-2" value={form.year} onChange={(e)=>setForm(f=>({...f, year:e.target.value}))} />
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <button type="button" onClick={()=>setShowModal(false)} className="px-4 py-2 rounded-md border">Cancel</button>
+                <button type="submit" disabled={!canSubmit || submitting} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">{submitting ? 'Processing…' : 'Pay ₹10 & Register'}</button>
+              </div>
+              {status && <p className="text-sm text-black mt-2">{status}</p>}
+            </form>
+          </div>
+        </div>
+      )}
     </>
   )
 }
