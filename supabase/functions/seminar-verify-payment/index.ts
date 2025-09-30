@@ -15,6 +15,8 @@ const RAZORPAY_KEY_SECRET = (globalThis as any).Deno?.env.get('RAZORPAY_KEY_SECR
 const STORAGE_BUCKET = (globalThis as any).Deno?.env.get('STORAGE_BUCKET') as string | undefined
 const SENDGRID_API_KEY = (globalThis as any).Deno?.env.get('SENDGRID_API_KEY') as string | undefined
 const EMAIL_FROM = (globalThis as any).Deno?.env.get('EMAIL_FROM') as string | undefined
+const EMAIL_FROM_NAME = (globalThis as any).Deno?.env.get('EMAIL_FROM_NAME') as string | undefined
+const REPLY_TO = (globalThis as any).Deno?.env.get('REPLY_TO') as string | undefined
 const VERIFY_BASE_URL = (globalThis as any).Deno?.env.get('VERIFY_BASE_URL') as string | undefined
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
@@ -116,6 +118,7 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
       <p><img src="${qrUrl}" alt="QR" style="max-width:320px"/></p>
       <p>Present this QR at the entry. Keep this email handy on event day.</p>
     `
+    const text = `Hi ${student_name || 'Participant'},\n\nThanks for registering for ${event_slug}.\nYour registration code: ${code}.\nOpen this link to view your QR: ${qrUrl}\n\nPresent this at entry.\n`
     const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
@@ -123,10 +126,14 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        personalizations: [{ to: [{ email: student_email }] }],
-        from: { email: EMAIL_FROM },
+        personalizations: [{ to: [{ email: student_email }], ...(REPLY_TO ? { headers: { 'Reply-To': REPLY_TO } } : {}) }],
+        from: EMAIL_FROM_NAME ? { email: EMAIL_FROM, name: EMAIL_FROM_NAME } : { email: EMAIL_FROM },
+        reply_to: REPLY_TO ? { email: REPLY_TO } : undefined,
         subject,
-        content: [{ type: 'text/html', value: html }],
+        content: [
+          { type: 'text/plain', value: text },
+          { type: 'text/html', value: html }
+        ],
         attachments: [{
           content: btoa(String.fromCharCode(...pngBytes)),
           filename: `${sanitizeFileName(code)}.png`,
