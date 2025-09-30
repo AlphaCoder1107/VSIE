@@ -18,6 +18,10 @@ export default function AdminHome() {
   const [loadingEvents, setLoadingEvents] = useState(true)
 
   useEffect(() => {
+    // Debug: helps confirm new admin bundle is deployed when checking browser console
+    // You should see this message once the new build is live.
+    // eslint-disable-next-line no-console
+    console.log('Admin dashboard: event cards bundle active')
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
     const { data: authSub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     return () => authSub.subscription.unsubscribe()
