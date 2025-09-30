@@ -138,31 +138,39 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
       <p>Present this QR at the entry. Keep this email handy on event day.</p>
     `
     const text = `Hi ${student_name || 'Participant'},\n\nThanks for registering for ${event_slug}.\nYour registration code: ${code}.\nOpen this link to view your QR: ${qrUrl}\n\nPresent this at entry.\n`
+
+    const payload: any = {
+      personalizations: [{ to: [{ email: student_email }] }],
+      from: EMAIL_FROM_NAME ? { email: EMAIL_FROM, name: EMAIL_FROM_NAME } : { email: EMAIL_FROM },
+      subject,
+      content: [
+        { type: 'text/plain', value: text },
+        { type: 'text/html', value: html }
+      ],
+      attachments: [{
+        content: btoa(String.fromCharCode(...pngBytes)),
+        filename: `${sanitizeFileName(code)}.png`,
+        type: 'image/png',
+        disposition: 'attachment'
+      }]
+    }
+    if (REPLY_TO) payload.reply_to = { email: REPLY_TO }
+
+    console.log('[seminar-verify] email-payload', { from: EMAIL_FROM, to: student_email, replyTo: REPLY_TO || null })
+
     const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${SENDGRID_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: student_email }], ...(REPLY_TO ? { headers: { 'Reply-To': REPLY_TO } } : {}) }],
-        from: EMAIL_FROM_NAME ? { email: EMAIL_FROM, name: EMAIL_FROM_NAME } : { email: EMAIL_FROM },
-        reply_to: REPLY_TO ? { email: REPLY_TO } : undefined,
-        subject,
-        content: [
-          { type: 'text/plain', value: text },
-          { type: 'text/html', value: html }
-        ],
-        attachments: [{
-          content: btoa(String.fromCharCode(...pngBytes)),
-          filename: `${sanitizeFileName(code)}.png`,
-          type: 'image/png',
-          disposition: 'attachment'
-        }]
-      })
+      body: JSON.stringify(payload)
     })
     emailed = resp.ok
     if (!resp.ok) {
+      let bodyText = ''
+      try { bodyText = await resp.text() } catch (_) {}
+      console.log('[seminar-verify] email-error', { status: resp.status, body: bodyText?.slice(0, 2000) })
       // Optionally track email failed count
       try {
         await supabaseAdmin
