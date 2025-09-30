@@ -24,7 +24,8 @@ export default function AdminLogin() {
       }
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
-        setMessage(error.message || 'Sign-in failed')
+        const extra = error.status ? ` (status ${error.status})` : ''
+        setMessage((error.message || 'Sign-in failed') + extra)
       } else {
         setMessage('Signed in. Redirecting…')
         window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/admin`
@@ -44,7 +45,7 @@ export default function AdminLogin() {
         <meta name="robots" content="noindex" />
       </Head>
       <div className="min-h-screen bg-vsie-900">
-        <Navbar />
+  <Navbar skipManagerProbe={true} />
         <main className="py-24">
           <div className="container max-w-md">
             <h1 className="text-3xl font-bold mb-6">Admin Login</h1>

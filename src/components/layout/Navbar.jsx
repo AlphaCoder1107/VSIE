@@ -13,7 +13,7 @@ const nav = [
   { name: 'Admin', href: '/admin/login' }
 ]
 
-export default function Navbar() {
+export default function Navbar({ skipManagerProbe = false }) {
   const [scrolled, setScrolled] = useState(false)
   const [isManager, setIsManager] = useState(false)
 
@@ -26,6 +26,7 @@ export default function Navbar() {
 
   // Probe manager capability: if ops-list-events returns ok, show Manager link
   useEffect(() => {
+    if (skipManagerProbe) return
     let mounted = true
     const check = async () => {
       try {
@@ -49,7 +50,7 @@ export default function Navbar() {
     check()
     const { data: sub } = supabase.auth.onAuthStateChange((_e, _s) => check())
     return () => { mounted = false; sub?.subscription?.unsubscribe?.() }
-  }, [])
+  }, [skipManagerProbe])
 
   return (
     <Disclosure as="nav" className={`fixed inset-x-0 top-0 z-50 transition-colors ${scrolled ? 'bg-vsie-900/80 backdrop-blur supports-[backdrop-filter]:bg-vsie-900/60' : 'bg-transparent'}`}>
