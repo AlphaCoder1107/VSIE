@@ -28,7 +28,10 @@ export default function AdminLogin() {
         setMessage((error.message || 'Sign-in failed') + extra)
       } else {
         setMessage('Signed in. Redirecting…')
-        window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/admin`
+        // Give the client a brief moment to persist the session before navigation
+        setTimeout(() => {
+          window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/admin`
+        }, 200)
       }
     } catch (err) {
       console.error('Sign-in exception', err)
