@@ -3,6 +3,7 @@ import { assetUrl } from '@/lib/url'
 import { useEffect, useState } from 'react'
 import { Disclosure } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { supabase } from '@/lib/supabaseClient'
 
 const nav = [
   { name: 'Home', href: '/' },
@@ -14,12 +15,40 @@ const nav = [
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
+  const [isManager, setIsManager] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
     onScroll()
     window.addEventListener('scroll', onScroll)
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Probe manager capability: if ops-list-events returns ok, show Manager link
+  useEffect(() => {
+    let mounted = true
+    const check = async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        const token = data?.session?.access_token
+        if (!token) { if (mounted) setIsManager(false); return }
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ops-list-events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({})
+        })
+        if (!mounted) return
+        if (res.ok) {
+          const out = await res.json().catch(() => ({}))
+          setIsManager(!!out?.ok)
+        } else {
+          setIsManager(false)
+        }
+      } catch { if (mounted) setIsManager(false) }
+    }
+    check()
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, _s) => check())
+    return () => { mounted = false; sub?.subscription?.unsubscribe?.() }
   }, [])
 
   return (
@@ -50,6 +79,9 @@ export default function Navbar() {
                     {item.name}
                   </Link>
                 ))}
+                {isManager && (
+                  <Link href="/ops" className="hover:text-white transition-colors">Manager</Link>
+                )}
                 <Link href="/apply" className="rounded-xl px-4 py-2 bg-vsie-accent text-white font-medium shadow hover:-translate-y-0.5 transition">Apply now</Link>
               </div>
               <div className="md:hidden">
@@ -68,6 +100,9 @@ export default function Navbar() {
                   {item.name}
                 </Link>
               ))}
+              {isManager && (
+                <Link href="/ops" className="block rounded-md px-3 py-2 text-base text-white hover:bg-white/10">Manager</Link>
+              )}
               <Link href="/apply" className="block rounded-md px-3 py-2 text-base bg-vsie-accent text-white font-medium">Apply now</Link>
             </div>
           </Disclosure.Panel>
