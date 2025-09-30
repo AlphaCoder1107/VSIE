@@ -129,13 +129,14 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
   // 4) Send email via SendGrid (optional)
   let emailed = false
   if (SENDGRID_API_KEY && EMAIL_FROM && student_email) {
-    const subject = `Your VIC Ticket — ${code}`
+  const subject = `Your VIC Ticket - ${code}`
     const html = `
       <p>Hi ${student_name || 'Participant'},</p>
       <p>Thanks for registering for <b>${event_slug}</b>.</p>
       <p>Your registration code: <b>${code}</b></p>
-      <p><img src="${qrUrl}" alt="QR" style="max-width:320px"/></p>
+      <p><img src="cid:qr-image" alt="QR" style="max-width:320px"/></p>
       <p>Present this QR at the entry. Keep this email handy on event day.</p>
+      <p>If the image doesn't load, your QR is attached as a PNG and available at: ${qrUrl}</p>
     `
     const text = `Hi ${student_name || 'Participant'},\n\nThanks for registering for ${event_slug}.\nYour registration code: ${code}.\nOpen this link to view your QR: ${qrUrl}\n\nPresent this at entry.\n`
 
@@ -147,12 +148,27 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
         { type: 'text/plain', value: text },
         { type: 'text/html', value: html }
       ],
-      attachments: [{
-        content: btoa(String.fromCharCode(...pngBytes)),
-        filename: `${sanitizeFileName(code)}.png`,
-        type: 'image/png',
-        disposition: 'attachment'
-      }]
+      // Inline the QR via CID and also attach as a file
+      attachments: [
+        {
+          content: btoa(String.fromCharCode(...pngBytes)),
+          filename: `${sanitizeFileName(code)}.png`,
+          type: 'image/png',
+          disposition: 'inline',
+          content_id: 'qr-image'
+        },
+        {
+          content: btoa(String.fromCharCode(...pngBytes)),
+          filename: `${sanitizeFileName(code)}.png`,
+          type: 'image/png',
+          disposition: 'attachment'
+        }
+      ],
+      // Reduce spam signals by disabling proxy tracking
+      tracking_settings: {
+        click_tracking: { enable: false, enable_text: false },
+        open_tracking: { enable: false }
+      }
     }
     if (REPLY_TO) payload.reply_to = { email: REPLY_TO }
 
