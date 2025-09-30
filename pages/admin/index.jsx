@@ -24,14 +24,19 @@ export default function AdminHome() {
     console.log('Admin dashboard: event cards bundle active')
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
     const { data: authSub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
-    // In rare cases on static hosts, a brief second check helps after navigation
-    setTimeout(() => {
-      supabase.auth.getSession().then(({ data }) => {
-        // eslint-disable-next-line no-console
-        console.log('Admin dashboard: second session check', !!data.session, data?.session?.user?.email)
-        if (data?.session) setSession((cur) => cur || data.session)
-      })
-    }, 250)
+    // On some static hosts, session persistence can be slightly delayed. Poll briefly.
+    ;(async () => {
+      for (let i = 0; i < 8; i++) {
+        const { data } = await supabase.auth.getSession()
+        if (data?.session) {
+          // eslint-disable-next-line no-console
+          console.log('Admin dashboard: session detected on retry', i, data?.session?.user?.email)
+          setSession((cur) => cur || data.session)
+          break
+        }
+        await new Promise((r) => setTimeout(r, 250))
+      }
+    })()
     return () => authSub.subscription.unsubscribe()
   }, [])
 
