@@ -125,11 +125,13 @@ export default function AdminSeminars() {
                       <th className="py-2 pr-4">Year</th>
                       <th className="py-2 pr-4">Amount</th>
                       <th className="py-2 pr-4">Status</th>
+                      <th className="py-2 pr-4">QR</th>
+                      <th className="py-2 pr-4">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.length === 0 && (
-                      <tr><td className="py-6 text-center text-white/60" colSpan={11}>No results</td></tr>
+                      <tr><td className="py-6 text-center text-white/60" colSpan={13}>No results</td></tr>
                     )}
                     {filtered.map((r) => (
                       <tr key={r.id} className="border-t border-white/10">
@@ -144,6 +146,20 @@ export default function AdminSeminars() {
                         <td className="py-2 pr-4">{r.year || '—'}</td>
                         <td className="py-2 pr-4">₹{(r.amount_paise ?? 0) / 100}</td>
                         <td className="py-2 pr-4">{r.status}</td>
+                        <td className="py-2 pr-4">
+                          {r.qr_url ? (
+                            <a href={r.qr_url} target="_blank" rel="noreferrer" className="text-vsie-accent underline">Open QR</a>
+                          ) : (
+                            <span className="text-white/50">—</span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <button
+                            className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs"
+                            title="Copy code"
+                            onClick={() => navigator.clipboard.writeText(r.registration_code || '')}
+                          >Copy Code</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
