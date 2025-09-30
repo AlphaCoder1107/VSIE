@@ -58,14 +58,26 @@ export default function AdminHome() {
       if (!session) { setLoadingEvents(false); return }
       setLoadingEvents(true)
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminar-events`, {
+        // Use the existing, working function and aggregate on the client to avoid CORS surprises
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminars`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-          body: JSON.stringify({})
+          body: JSON.stringify({ limit: 1000 })
         })
         const out = await res.json()
         if (!res.ok) throw new Error(out?.error || `Failed (${res.status})`)
-        setEvents(out.rows || [])
+        const rows = Array.isArray(out.rows) ? out.rows : []
+        const groups = {}
+        for (const r of rows) {
+          const slug = String(r.event_slug || 'unknown')
+          if (!groups[slug]) groups[slug] = { event_slug: slug, count: 0, amount_sum: 0, last_created_at: null }
+          groups[slug].count += 1
+          groups[slug].amount_sum += Number(r.amount_paise || 0)
+          const ts = r.created_at ? new Date(r.created_at).toISOString() : null
+          if (ts && (!groups[slug].last_created_at || ts > groups[slug].last_created_at)) groups[slug].last_created_at = ts
+        }
+        const agg = Object.values(groups).sort((a, b) => (b.last_created_at || '').localeCompare(a.last_created_at || ''))
+        setEvents(agg)
       } catch (e) {
         // Non-fatal for main apps table
         console.warn('Failed to load seminar events:', e)
