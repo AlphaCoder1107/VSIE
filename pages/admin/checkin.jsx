@@ -23,25 +23,30 @@ export default function AdminCheckin() {
     return () => authSub.subscription.unsubscribe()
   }, [])
 
-  // Load distinct event slugs for local categorical search
+  const refreshEvents = async () => {
+    if (!session) return
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminars`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ limit: 1000 })
+      })
+      const out = await res.json()
+      if (!res.ok) throw new Error(out?.error || `Failed (${res.status})`)
+      const uniq = Array.from(new Set((out.rows || []).map(r => r.event_slug))).filter(Boolean).sort()
+      setEventSlugs(uniq)
+      // If selected slug was removed, clear it; if none selected and only one exists, preselect
+      if (eventSlug && !uniq.includes(eventSlug)) setEventSlug('')
+      if (!eventSlug && uniq.length === 1) setEventSlug(uniq[0])
+    } catch { /* ignore */ }
+  }
+
+  // Load distinct event slugs initially and every 60s
   useEffect(() => {
-    const loadEvents = async () => {
-      if (!session) return
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminars`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-          body: JSON.stringify({ limit: 1000 })
-        })
-        const out = await res.json()
-        if (!res.ok) throw new Error(out?.error || `Failed (${res.status})`)
-        const uniq = Array.from(new Set((out.rows || []).map(r => r.event_slug))).filter(Boolean).sort()
-        setEventSlugs(uniq)
-        // If there is only one event, preselect it
-        if (!eventSlug && uniq.length === 1) setEventSlug(uniq[0])
-      } catch { /* ignore errors in dropdown */ }
-    }
-    loadEvents()
+    if (!session) return
+    refreshEvents()
+    const t = setInterval(() => refreshEvents(), 60000)
+    return () => clearInterval(t)
   }, [session])
 
   useEffect(() => {
@@ -217,10 +222,13 @@ export default function AdminCheckin() {
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/70 mb-1">Event (restrict scanner to one event)</label>
-                  <input list="event-slugs" value={eventSlug} onChange={(e)=>setEventSlug(e.target.value)} className="w-full rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-sm placeholder-white/50" placeholder="Type to search events…" />
-                  <datalist id="event-slugs">
-                    {eventSlugs.map(s => (<option key={s} value={s} />))}
-                  </datalist>
+                  <div className="flex items-center gap-2">
+                    <select value={eventSlug} onChange={(e)=>setEventSlug(e.target.value)} className="flex-1 rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-sm text-white">
+                      <option value="">All events (not restricted)</option>
+                      {eventSlugs.map(s => (<option key={s} value={s}>{s}</option>))}
+                    </select>
+                    <button onClick={refreshEvents} className="px-3 py-2 rounded-lg bg-white/10 text-white">Refresh</button>
+                  </div>
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
                     <button onClick={()=>{ setResult(null); setMessage(''); setStatus('idle'); setScanning(true) }} disabled={scanning} className="px-3 py-2 rounded-lg bg-vsie-accent text-white disabled:opacity-50">Start scanning</button>
                     <button onClick={()=>setScanning(false)} className="px-3 py-2 rounded-lg bg-white/10 text-white">Stop</button>
