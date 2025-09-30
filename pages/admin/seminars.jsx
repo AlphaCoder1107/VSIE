@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { supabase } from '@/lib/supabaseClient'
 
 export default function AdminSeminars() {
+  const router = useRouter()
   const [session, setSession] = useState(null)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -13,6 +15,12 @@ export default function AdminSeminars() {
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [slug, setSlug] = useState('')
+  // Prefill slug from query (?slug=...) on first mount
+  useEffect(() => {
+    if (!router.isReady) return
+    const q = String(router.query.slug || '')
+    if (q) setSlug(q)
+  }, [router.isReady])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))

@@ -14,6 +14,8 @@ export default function AdminHome() {
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
+  const [events, setEvents] = useState([])
+  const [loadingEvents, setLoadingEvents] = useState(true)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
@@ -45,6 +47,29 @@ export default function AdminHome() {
     }
     load()
   }, [session, debounced])
+
+  // Load seminar event aggregates for the dashboard cards
+  useEffect(() => {
+    async function loadEvents() {
+      if (!session) { setLoadingEvents(false); return }
+      setLoadingEvents(true)
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminar-events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({})
+        })
+        const out = await res.json()
+        if (!res.ok) throw new Error(out?.error || `Failed (${res.status})`)
+        setEvents(out.rows || [])
+      } catch (e) {
+        // Non-fatal for main apps table
+        console.warn('Failed to load seminar events:', e)
+      }
+      setLoadingEvents(false)
+    }
+    loadEvents()
+  }, [session])
 
   // Debounce the search input to avoid spamming the function
   useEffect(() => {
@@ -159,8 +184,27 @@ export default function AdminHome() {
               )}
             </div>
             {session && (
-              <div className="mb-4">
-                <Link href="/admin/seminars" className="inline-flex items-center rounded-xl px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm">View seminar registrations</Link>
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-3">Seminar overview</h2>
+                {loadingEvents ? (
+                  <p className="text-white/60 text-sm">Loading events…</p>
+                ) : events.length ? (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {events.map(ev => (
+                      <div key={ev.event_slug} className="flex items-center gap-4 bg-white/10 border border-white/10 rounded-2xl p-4">
+                        <div className="shrink-0 w-20 h-20 rounded-2xl bg-black/50 grid place-items-center text-white/60 text-xs">IMG</div>
+                        <div className="flex-1">
+                          <div className="text-lg font-semibold">{ev.event_slug}</div>
+                          <div className="text-white/70 text-sm">Base Info</div>
+                          <div className="text-white/50 text-xs mt-1">{ev.count} registrations • ₹{(ev.amount_sum || 0) / 100} collected</div>
+                        </div>
+                        <Link href={`/admin/seminars?slug=${encodeURIComponent(ev.event_slug)}`} className="shrink-0 inline-flex items-center justify-center h-10 px-4 rounded-full bg-black/60 text-white text-sm">View</Link>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-white/60 text-sm">No seminar registrations yet.</div>
+                )}
               </div>
             )}
             <p className="mb-6 text-xs text-white/50">Only emails in the ADMIN_EMAILS function secret can access data.</p>
