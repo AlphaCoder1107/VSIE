@@ -72,9 +72,23 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
   if (!STORAGE_BUCKET) return { uploaded: false, emailed: false }
   // 1) Build QR payload and render to PNG data URL
   const payload = buildQrPayload({ id, registration_code, student_name, student_email })
-  const dataUrl = await QRCode.toDataURL(payload, { type: 'image/png', width: 320 })
-  const pngBytes = await dataUrlToBytes(dataUrl)
-  console.log('[seminar-verify] qr-bytes', { length: pngBytes.length })
+  let pngBytes: Uint8Array | null = null
+  try {
+    const dataUrl = await QRCode.toDataURL(payload, { type: 'image/png', width: 320 })
+    pngBytes = await dataUrlToBytes(dataUrl)
+    console.log('[seminar-verify] qr-bytes (local)', { length: pngBytes.length })
+  } catch (e) {
+    console.log('[seminar-verify] local QR gen failed, falling back', { err: String(e) })
+  }
+  if (!pngBytes) {
+    // Fallback: use an external QR API to get a PNG
+    const api = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(payload)}`
+    const r = await fetch(api)
+    if (!r.ok) throw new Error(`QR API failed (${r.status})`)
+    const ab = await r.arrayBuffer()
+    pngBytes = new Uint8Array(ab)
+    console.log('[seminar-verify] qr-bytes (api)', { length: pngBytes.length })
+  }
 
   // 2) Upload to Supabase Storage
   const year = new Date().getFullYear()
