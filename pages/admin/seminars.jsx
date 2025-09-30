@@ -137,7 +137,9 @@ export default function AdminSeminars() {
                       <tr key={r.id} className="border-t border-white/10">
                         <td className="py-2 pr-4">{r.id}</td>
                         <td className="py-2 pr-4">{r.created_at ? new Date(r.created_at).toLocaleString() : ''}</td>
-                        <td className="py-2 pr-4 font-mono">{r.registration_code}</td>
+                        <td className="py-2 pr-4 font-mono">
+                          <Link href={`/admin/seminar?id=${r.id}`} className="underline text-vsie-accent">{r.registration_code}</Link>
+                        </td>
                         <td className="py-2 pr-4">{r.event_slug}</td>
                         <td className="py-2 pr-4">{r.student_name}</td>
                         <td className="py-2 pr-4">{r.student_email}</td>
