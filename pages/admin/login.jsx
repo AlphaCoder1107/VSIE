@@ -15,14 +15,26 @@ export default function AdminLogin() {
     e.preventDefault()
     setLoading(true)
     setMessage('')
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setMessage('Signed in. Redirecting…')
-      window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/admin`
+    try {
+      const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (!SUPABASE_URL || !SUPABASE_ANON) {
+        setMessage('Auth not configured. Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY at build time.')
+        return
+      }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setMessage(error.message || 'Sign-in failed')
+      } else {
+        setMessage('Signed in. Redirecting…')
+        window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/admin`
+      }
+    } catch (err) {
+      console.error('Sign-in exception', err)
+      setMessage('Network/auth error. See console for details.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
