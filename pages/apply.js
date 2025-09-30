@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+// Reuse the shared Supabase client to avoid multiple GoTrueClient instances
+import { supabase as supabaseGlobal } from '@/lib/supabaseClient'
 import Head from 'next/head'
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
@@ -12,12 +13,12 @@ const formEndpoint = process.env.NEXT_PUBLIC_FORM_ENDPOINT || '' // e.g. https:/
 const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY || ''
 const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''
 
-// Supabase (client-side) fallback configuration
+// Supabase (client-side) configuration
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const SUPABASE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'attachments'
 const supabaseEnabled = !!(SUPABASE_URL && SUPABASE_ANON_KEY)
-const supabase = supabaseEnabled ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
+const supabase = supabaseEnabled ? supabaseGlobal : null
 
 function classNames(...a) { return a.filter(Boolean).join(' ') }
 
