@@ -22,6 +22,7 @@ export default function AdminHome() {
     // You should see this message once the new build is live.
     // eslint-disable-next-line no-console
     console.log('Admin dashboard: event cards bundle active')
+    if (!supabase) return
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
     const { data: authSub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     return () => authSub.subscription.unsubscribe()
@@ -176,7 +177,10 @@ export default function AdminHome() {
     doc.save(`applications_${stamp}.pdf`)
   }
 
-  const signOut = async () => { await supabase.auth.signOut(); router.push('/admin/login') }
+  const signOut = async () => { 
+    if (supabase) await supabase.auth.signOut()
+    router.push('/admin/login')
+  }
 
   return (
     <>
