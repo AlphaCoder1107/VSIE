@@ -158,6 +158,11 @@ export default function AdminHome() {
                 <Link href="/admin/login" className="rounded-xl px-4 py-2 bg-vsie-accent text-white">Login</Link>
               )}
             </div>
+            {session && (
+              <div className="mb-4">
+                <Link href="/admin/seminars" className="inline-flex items-center rounded-xl px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm">View seminar registrations</Link>
+              </div>
+            )}
             <p className="mb-6 text-xs text-white/50">Only emails in the ADMIN_EMAILS function secret can access data.</p>
             {!session ? (
               <p className="text-vsie-muted">Please <Link href="/admin/login" className="underline">log in</Link> to view applications.</p>
