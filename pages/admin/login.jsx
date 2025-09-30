@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
@@ -6,6 +7,7 @@ import Footer from '@/components/layout/Footer'
 import { supabase } from '@/lib/supabaseClient'
 
 export default function AdminLogin() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -29,9 +31,9 @@ export default function AdminLogin() {
       } else {
         setMessage('Signed in. Redirecting…')
         // Give the client a brief moment to persist the session before navigation
-        setTimeout(() => {
-          window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/admin`
-        }, 200)
+        await new Promise((r) => setTimeout(r, 200))
+        // Use Next.js router so basePath is handled and SPA context is preserved
+        await router.replace('/admin')
       }
     } catch (err) {
       console.error('Sign-in exception', err)
