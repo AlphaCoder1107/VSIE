@@ -12,8 +12,9 @@ export default function AdminCheckin() {
   const [scanning, setScanning] = useState(false)
   const [message, setMessage] = useState('')
   const [eventSlug, setEventSlug] = useState('')
+  const [eventSlugs, setEventSlugs] = useState([])
   const [result, setResult] = useState(null)
-  // New: status of last scan: 'idle' | 'success' | 'already' | 'error'
+  // status: 'idle' | 'success' | 'already' | 'wrong-event' | 'error'
   const [status, setStatus] = useState('idle')
 
   useEffect(() => {
@@ -21,6 +22,27 @@ export default function AdminCheckin() {
     const { data: authSub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => authSub.subscription.unsubscribe()
   }, [])
+
+  // Load distinct event slugs for local categorical search
+  useEffect(() => {
+    const loadEvents = async () => {
+      if (!session) return
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminars`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ limit: 1000 })
+        })
+        const out = await res.json()
+        if (!res.ok) throw new Error(out?.error || `Failed (${res.status})`)
+        const uniq = Array.from(new Set((out.rows || []).map(r => r.event_slug))).filter(Boolean).sort()
+        setEventSlugs(uniq)
+        // If there is only one event, preselect it
+        if (!eventSlug && uniq.length === 1) setEventSlug(uniq[0])
+      } catch { /* ignore errors in dropdown */ }
+    }
+    loadEvents()
+  }, [session])
 
   useEffect(() => {
     if (!scanning) return
@@ -58,6 +80,27 @@ export default function AdminCheckin() {
     return () => { if (raf) cancelAnimationFrame(raf); if (stream) stream.getTracks().forEach(t => t.stop()) }
   }, [scanning])
 
+  const fetchMetaByCodeOrId = async (code, id) => {
+    try {
+      const token = session?.access_token
+      const query = id ? String(id) : String(code || '')
+      if (!query) return null
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminars`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ limit: 50, query })
+      })
+      const out = await res.json()
+      if (!res.ok) return null
+      const rows = out.rows || []
+      // Prefer exact id or code match
+      let row = null
+      if (id) row = rows.find(r => r.id === Number(id))
+      if (!row && code) row = rows.find(r => String(r.registration_code) === String(code))
+      return row || rows[0] || null
+    } catch { return null }
+  }
+
   const handleScan = async (payload) => {
     try {
       setMessage('')
@@ -79,7 +122,19 @@ export default function AdminCheckin() {
         body: JSON.stringify({ code, id, event_slug: eventSlug || undefined })
       })
       const out = await res.json()
-      if (!res.ok || !out.ok) throw new Error(out?.error || `Failed (${res.status})`)
+      if (!res.ok || !out.ok) {
+        // If event is selected and function did not find row (likely wrong event), show restricted info
+        if ((res.status === 404 || out?.error === 'not-found') && eventSlug) {
+          const meta = await fetchMetaByCodeOrId(code, id)
+          if (meta && meta.event_slug && meta.event_slug !== eventSlug) {
+            setResult(meta)
+            setStatus('wrong-event')
+            if (navigator.vibrate) navigator.vibrate([220, 90, 220])
+            return
+          }
+        }
+        throw new Error(out?.error || `Failed (${res.status})`)
+      }
       setResult(out.row)
       if (out.already) {
         setStatus('already')
@@ -96,6 +151,18 @@ export default function AdminCheckin() {
   }
 
   const statusBox = () => {
+    if (status === 'wrong-event' && result) {
+      return (
+        <div className="mt-4 text-sm bg-red-500/10 border border-red-500/40 text-red-300 rounded-lg p-3">
+          <div className="font-semibold">Wrong event — block entry</div>
+          <div className="mt-1"><span className="text-white/70">Scanned ticket for:</span> <span className="font-mono">{result.event_slug}</span></div>
+          <div className="mt-1"><span className="text-white/70">Gate set to:</span> <span className="font-mono">{eventSlug || '—'}</span></div>
+          <div className="mt-1"><span className="text-white/70">Code:</span> <span className="font-mono">{result.registration_code}</span></div>
+          <div className="mt-1"><span className="text-white/70">Amount:</span> ₹{(result.amount_paise ?? 0) / 100}</div>
+          <div className="mt-2 text-xs text-white/70">This ticket belongs to a different event. Please redirect the attendee to the correct gate.</div>
+        </div>
+      )
+    }
     if (!result && !message) return null
     if (status === 'already') {
       return (
@@ -149,9 +216,12 @@ export default function AdminCheckin() {
             ) : (
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-white/70 mb-1">Event slug (optional, restricts to event)</label>
-                  <input value={eventSlug} onChange={(e)=>setEventSlug(e.target.value)} className="w-full rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-sm placeholder-white/50" placeholder="ai-hackathon-nov-2025" />
-                  <div className="mt-3 flex items-center gap-2">
+                  <label className="block text-sm text-white/70 mb-1">Event (restrict scanner to one event)</label>
+                  <input list="event-slugs" value={eventSlug} onChange={(e)=>setEventSlug(e.target.value)} className="w-full rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-sm placeholder-white/50" placeholder="Type to search events…" />
+                  <datalist id="event-slugs">
+                    {eventSlugs.map(s => (<option key={s} value={s} />))}
+                  </datalist>
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
                     <button onClick={()=>{ setResult(null); setMessage(''); setStatus('idle'); setScanning(true) }} disabled={scanning} className="px-3 py-2 rounded-lg bg-vsie-accent text-white disabled:opacity-50">Start scanning</button>
                     <button onClick={()=>setScanning(false)} className="px-3 py-2 rounded-lg bg-white/10 text-white">Stop</button>
                     {!scanning && (
