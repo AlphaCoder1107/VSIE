@@ -33,6 +33,28 @@ export default function AdminHome() {
           if (restored?.session) setSession(restored.session)
         }
       } catch {}
+
+      // Fallback: scan localStorage for Supabase auth token and restore
+      try {
+        if (typeof window !== 'undefined') {
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const key = window.localStorage.key(i) || ''
+            if (/^sb-.+-auth-token$/.test(key)) {
+              const raw = window.localStorage.getItem(key)
+              if (!raw) continue
+              try {
+                const parsed = JSON.parse(raw)
+                const access_token = parsed?.access_token || parsed?.currentSession?.access_token
+                const refresh_token = parsed?.refresh_token || parsed?.currentSession?.refresh_token
+                if (access_token && refresh_token) {
+                  const { data: restored2 } = await supabase.auth.setSession({ access_token, refresh_token })
+                  if (restored2?.session) { setSession(restored2.session); break }
+                }
+              } catch {}
+            }
+          }
+        }
+      } catch {}
     })
     const { data: authSub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     // On some static hosts, session persistence can be slightly delayed. Poll briefly.
