@@ -202,6 +202,9 @@ export default function AdminHome() {
             {session && (
               <div className="mb-6">
                 <h2 className="text-xl font-semibold mb-3">Seminar overview</h2>
+                <div className="mb-3">
+                  <Link href="/admin/checkin" className="inline-flex items-center rounded-xl px-4 py-2 bg-vsie-accent text-white text-sm">Open QR Check-in</Link>
+                </div>
                 {loadingEvents ? (
                   <p className="text-white/60 text-sm">Loading events…</p>
                 ) : events.length ? (
