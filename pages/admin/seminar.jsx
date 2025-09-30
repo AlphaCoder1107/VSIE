@@ -114,6 +114,20 @@ export default function AdminSeminarDetail() {
                     className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
                     onClick={() => navigator.clipboard.writeText(row.registration_code || '')}
                   >Copy Code</button>
+                  <button
+                    className="px-3 py-2 rounded-lg bg-vsie-accent text-white text-sm"
+                    onClick={async ()=>{
+                      try{
+                        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-resend-seminar-ticket`,{
+                          method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},
+                          body: JSON.stringify({ id: row.id })
+                        })
+                        const out = await res.json()
+                        if(!res.ok||!out.ok) throw new Error(out?.error||`Failed (${res.status})`)
+                        alert('Ticket sent successfully')
+                      }catch(e){ alert(String(e?.message||e)) }
+                    }}
+                  >Resend ticket</button>
                 </div>
               </div>
             ) : (
