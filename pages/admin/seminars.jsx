@@ -15,6 +15,9 @@ export default function AdminSeminars() {
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [slug, setSlug] = useState('')
+  // New: pending state for row actions
+  const [pending, setPending] = useState({ id: null, action: '' })
+
   // Prefill slug from query (?slug=...) on first mount
   useEffect(() => {
     if (!router.isReady) return
@@ -94,6 +97,49 @@ export default function AdminSeminars() {
     URL.revokeObjectURL(url)
   }
 
+  // New: resend ticket
+  const handleResend = async (id) => {
+    if (!session) return
+    try {
+      setPending({ id, action: 'resend' })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-resend-seminar-ticket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ id })
+      })
+      const out = await res.json()
+      if (!res.ok || !out.ok) throw new Error(out?.error || `Failed (${res.status})`)
+      alert('Ticket resent successfully')
+    } catch (e) {
+      alert(String(e?.message || e))
+    } finally {
+      setPending({ id: null, action: '' })
+    }
+  }
+
+  // New: check-in action
+  const handleCheckin = async (row) => {
+    if (!session) return
+    try {
+      setPending({ id: row.id, action: 'checkin' })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-checkin-seminar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ id: row.id, event_slug: row.event_slug })
+      })
+      const out = await res.json()
+      if (!res.ok || !out.ok) throw new Error(out?.error || `Failed (${res.status})`)
+      if (out.row) {
+        setRows((prev) => prev.map(r => r.id === row.id ? { ...r, checked_in: out.row.checked_in, checked_in_at: out.row.checked_in_at, checked_in_by: out.row.checked_in_by } : r))
+      }
+      alert(out.already ? 'Already checked in' : 'Checked in successfully')
+    } catch (e) {
+      alert(String(e?.message || e))
+    } finally {
+      setPending({ id: null, action: '' })
+    }
+  }
+
   return (
     <>
       <Head>
@@ -167,11 +213,23 @@ export default function AdminSeminars() {
                           )}
                         </td>
                         <td className="py-2 pr-4">
-                          <button
-                            className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs"
-                            title="Copy code"
-                            onClick={() => navigator.clipboard.writeText(r.registration_code || '')}
-                          >Copy Code</button>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs"
+                              title="Copy code"
+                              onClick={() => navigator.clipboard.writeText(r.registration_code || '')}
+                            >Copy Code</button>
+                            <button
+                              className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs disabled:opacity-50"
+                              onClick={() => handleResend(r.id)}
+                              disabled={pending.id === r.id && pending.action === 'resend'}
+                            >Resend</button>
+                            <button
+                              className="px-2 py-1 rounded bg-vsie-accent text-white text-xs disabled:opacity-50"
+                              onClick={() => handleCheckin(r)}
+                              disabled={pending.id === r.id && pending.action === 'checkin'}
+                            >Check-in</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
