@@ -26,16 +26,28 @@ export default function AdminCheckin() {
   const refreshEvents = async () => {
     if (!session) return
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminars`, {
+      // First, try canonical events list
+      let res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ limit: 1000 })
+        body: JSON.stringify({ activeOnly: true })
       })
-      const out = await res.json()
-      if (!res.ok) throw new Error(out?.error || `Failed (${res.status})`)
-      const uniq = Array.from(new Set((out.rows || []).map(r => r.event_slug))).filter(Boolean).sort()
+      let out = await res.json()
+      let uniq = []
+      if (res.ok && out?.events) {
+        uniq = (out.events || []).filter(e => e.active).map(e => e.slug)
+      } else {
+        // Fallback to distinct slugs from registrations
+        res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-list-seminars`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ limit: 1000 })
+        })
+        out = await res.json()
+        if (res.ok) uniq = Array.from(new Set((out.rows || []).map(r => r.event_slug))).filter(Boolean)
+      }
+      uniq = Array.from(new Set(uniq)).sort()
       setEventSlugs(uniq)
-      // If selected slug was removed, clear it; if none selected and only one exists, preselect
       if (eventSlug && !uniq.includes(eventSlug)) setEventSlug('')
       if (!eventSlug && uniq.length === 1) setEventSlug(uniq[0])
     } catch { /* ignore */ }
