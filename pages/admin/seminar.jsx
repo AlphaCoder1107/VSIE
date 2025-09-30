@@ -15,6 +15,7 @@ export default function AdminSeminarDetail() {
   const id = router?.query?.id ? Number(router.query.id) : null
 
   useEffect(() => {
+    if (!supabase) return
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
     const { data: authSub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     return () => authSub.subscription.unsubscribe()

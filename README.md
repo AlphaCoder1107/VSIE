@@ -35,13 +35,16 @@ npm start
 ## Deploy
 Deploy on Vercel, Netlify, or GitHub Pages (static export).
 
-1. Push to GitHub
-2. For GitHub Pages:
-	- In GitHub repo settings: Enable Pages with Source: GitHub Actions
-	- Ensure default branch is `main`
-	- A workflow `.github/workflows/deploy.yml` is included; it builds with `next export` and deploys the `out` folder
-	- After the action runs, your site will be live at `https://<user>.github.io/<repo>/`
+**For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)**
 
-For Vercel:
+### Quick Start - GitHub Pages:
+1. Push to GitHub
+2. In GitHub repo settings: Enable Pages with Source: GitHub Actions
+3. Ensure default branch is `main`
+4. A workflow `.github/workflows/deploy.yml` is included; it builds with `next export` and deploys the `out` folder
+5. After the action runs, your site will be live at `https://<user>.github.io/<repo>/`
+
+### Quick Start - Vercel:
 1. Import repository in Vercel
 2. Deploy with defaults
+3. Configure environment variables in Vercel dashboard (see DEPLOYMENT.md)

@@ -18,6 +18,7 @@ export default function AdminCheckin() {
   const [status, setStatus] = useState('idle')
 
   useEffect(() => {
+    if (!supabase) return
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
     const { data: authSub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => authSub.subscription.unsubscribe()
