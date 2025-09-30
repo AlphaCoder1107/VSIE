@@ -74,16 +74,20 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
   const payload = buildQrPayload({ id, registration_code, student_name, student_email })
   const dataUrl = await QRCode.toDataURL(payload, { type: 'image/png', width: 320 })
   const pngBytes = await dataUrlToBytes(dataUrl)
+  console.log('[seminar-verify] qr-bytes', { length: pngBytes.length })
 
   // 2) Upload to Supabase Storage
   const year = new Date().getFullYear()
   const code = registration_code || `reg-${id}`
   const filePath = `registrations/${year}/${sanitizeFileName(code)}.png`
-  const { error: uploadErr } = await supabaseAdmin.storage.from(STORAGE_BUCKET).upload(filePath, pngBytes, {
+  // Use Blob to improve compatibility in Deno runtimes
+  const blob = new Blob([pngBytes], { type: 'image/png' })
+  const { error: uploadErr } = await supabaseAdmin.storage.from(STORAGE_BUCKET).upload(filePath, blob, {
     contentType: 'image/png',
     upsert: true
   })
   if (uploadErr) throw uploadErr
+  console.log('[seminar-verify] uploaded', { filePath })
   // Prefer signed URL (works with private buckets). Fallback to public URL if signing fails.
   let qrUrl: string | undefined
   try {
@@ -96,6 +100,7 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
     const { publicURL } = supabaseAdmin.storage.from(STORAGE_BUCKET).getPublicUrl(filePath)
     qrUrl = publicURL
   }
+  console.log('[seminar-verify] qr-url', { qrUrl: !!qrUrl })
 
   // 3) Update DB with QR URL and generated flags (if columns exist)
   try {
@@ -152,6 +157,7 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
           .eq('id', id)
       } catch (_) {}
     }
+    console.log('[seminar-verify] email-sent', { ok: emailed })
   }
 
   return { uploaded: true, emailed }
@@ -166,6 +172,7 @@ serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({})) as any
     const { razorpay_payment_id, razorpay_order_id, razorpay_signature, student } = body || {}
+    console.log('[seminar-verify] start', { order: razorpay_order_id, payment: razorpay_payment_id, hasStudent: !!student })
     if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !student) {
       return json({ error: 'Missing parameters' }, { status: 400 })
     }
@@ -183,8 +190,10 @@ serve(async (req: Request) => {
     })
     const paymentInfo = await payRes.json()
     if (!payRes.ok || (paymentInfo?.status !== 'captured')) {
+      console.log('[seminar-verify] not captured', { status: paymentInfo?.status, httpOk: payRes.ok })
       return json({ error: 'Payment not captured', details: paymentInfo }, { status: 400 })
     }
+    console.log('[seminar-verify] captured', { amount: paymentInfo?.amount, currency: paymentInfo?.currency })
 
     // 3) Insert registration row
     const insertPayload = {
@@ -207,7 +216,11 @@ serve(async (req: Request) => {
       .select('id, registration_code')
       .single()
 
-    if (error) return json({ error: 'DB insert failed', details: error.message }, { status: 500 })
+    if (error) {
+      console.error('[seminar-verify] DB insert failed', error)
+      return json({ error: 'DB insert failed', details: error.message }, { status: 500 })
+    }
+    console.log('[seminar-verify] inserted', { id: data?.id, code: data?.registration_code })
 
     // 4) Generate QR, upload, and send email (best-effort; do not fail payment if this fails)
     try {
@@ -220,7 +233,7 @@ serve(async (req: Request) => {
       })
     } catch (postErr) {
       // log and continue; payment is already successful and row inserted
-      console.error('post-process failed', postErr)
+      console.error('[seminar-verify] post-process failed', postErr)
     }
 
     return json({ ok: true, registration_code: data?.registration_code, id: data?.id })
