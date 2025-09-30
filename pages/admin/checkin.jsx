@@ -223,9 +223,9 @@ export default function AdminCheckin() {
                 <div>
                   <label className="block text-sm text-white/70 mb-1">Event (restrict scanner to one event)</label>
                   <div className="flex items-center gap-2">
-                    <select value={eventSlug} onChange={(e)=>setEventSlug(e.target.value)} className="flex-1 rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-sm text-white">
-                      <option value="">All events (not restricted)</option>
-                      {eventSlugs.map(s => (<option key={s} value={s}>{s}</option>))}
+                    <select value={eventSlug} onChange={(e)=>setEventSlug(e.target.value)} className="flex-1 rounded-lg bg-white text-black border border-white/10 px-3 py-2 text-sm">
+                      <option value="" style={{ color: '#000' }}>All events (not restricted)</option>
+                      {eventSlugs.map(s => (<option key={s} value={s} style={{ color: '#000' }}>{s}</option>))}
                     </select>
                     <button onClick={refreshEvents} className="px-3 py-2 rounded-lg bg-white/10 text-white">Refresh</button>
                   </div>
