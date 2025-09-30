@@ -30,6 +30,15 @@ export default function AdminLogin() {
         setMessage((error.message || 'Sign-in failed') + extra)
       } else {
         setMessage('Signed in. Redirecting…')
+        // Bootstrap tokens in case some browsers delay persistence
+        try {
+          const at = data?.session?.access_token
+          const rt = data?.session?.refresh_token
+          if (at && rt && typeof window !== 'undefined') {
+            sessionStorage.setItem('sb_bootstrap_access', at)
+            sessionStorage.setItem('sb_bootstrap_refresh', rt)
+          }
+        } catch {}
         // Give the client a brief moment to persist the session before navigation
         await new Promise((r) => setTimeout(r, 200))
         // Use Next.js router so basePath is handled and SPA context is preserved

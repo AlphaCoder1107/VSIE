@@ -22,7 +22,18 @@ export default function AdminHome() {
     // You should see this message once the new build is live.
     // eslint-disable-next-line no-console
     console.log('Admin dashboard: event cards bundle active')
-    supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data?.session) { setSession(data.session); return }
+      // Attempt bootstrap restore if available
+      try {
+        const at = typeof window !== 'undefined' ? sessionStorage.getItem('sb_bootstrap_access') : null
+        const rt = typeof window !== 'undefined' ? sessionStorage.getItem('sb_bootstrap_refresh') : null
+        if (at && rt) {
+          const { data: restored } = await supabase.auth.setSession({ access_token: at, refresh_token: rt })
+          if (restored?.session) setSession(restored.session)
+        }
+      } catch {}
+    })
     const { data: authSub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     // On some static hosts, session persistence can be slightly delayed. Poll briefly.
     ;(async () => {
