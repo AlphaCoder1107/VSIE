@@ -8,6 +8,11 @@
 // - Adds Cache-Control: public, max-age=600 to reduce latency without staleness.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.4'
+
+const SUPABASE_URL = (globalThis as any).Deno?.env.get('SUPABASE_URL') as string
+const SERVICE_ROLE_KEY = (globalThis as any).Deno?.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
+const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
 function corsHeaders(init: ResponseInit = {}) {
   const headers = new Headers(init.headers)
@@ -71,6 +76,24 @@ serve(async (req: Request) => {
       const og = await resolveOgImage(imgUrl)
       if (og) imgUrl = og
     }
+
+    // Special handling for this project's Supabase Storage public URLs
+    try {
+      const t = new URL(imgUrl)
+      const projectHost = new URL(SUPABASE_URL).host
+      if (t.host === projectHost && t.pathname.startsWith('/storage/v1/object/public/')) {
+        // Extract bucket and object path
+        const parts = t.pathname.replace('/storage/v1/object/public/', '').split('/')
+        const bucket = parts.shift() || ''
+        const objectPath = decodeURIComponent(parts.join('/'))
+        if (bucket && objectPath) {
+          const { data: signed, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(objectPath, 3600)
+          if (!error && signed?.signedUrl) {
+            imgUrl = signed.signedUrl
+          }
+        }
+      }
+    } catch { /* ignore and continue with original imgUrl */ }
 
     const resp = await fetchWithUA(imgUrl)
     if (!resp.ok) return new Response('Fetch failed', { status: 502, headers: corsHeaders() })

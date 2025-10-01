@@ -4,7 +4,7 @@ export function assetUrl(path) {
   if (/^https?:\/\//i.test(path)) {
     const supa = process.env.NEXT_PUBLIC_SUPABASE_URL
     if (supa) {
-      const proxied = `${supa}/functions/v1/image-proxy?url=${encodeURIComponent(path)}`
+      const proxied = `${supa}/functions/v1/image-proxy?url=${encodeURIComponent(path)}&t=${Date.now()}`
       return proxied
     }
     return path
