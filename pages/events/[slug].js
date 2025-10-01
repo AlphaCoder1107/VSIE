@@ -249,7 +249,11 @@ export default function EventDetail({ event }) {
               </div>
               <div className="flex items-center justify-between pt-2">
                 <button type="button" onClick={()=>setShowModal(false)} className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={!canSubmit || submitting || !isActive} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">{submitting ? 'Processing…' : 'Pay ₹10 & Register'}</button>
+                <button type="submit" disabled={!canSubmit || submitting || !isActive} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">
+                  {submitting
+                    ? 'Processing…'
+                    : `Pay ₹${(((serverPricePaise ?? 1000) / 100)).toFixed(2)} & Register`}
+                </button>
               </div>
               {status && <p className="text-sm text-black mt-2">{status}</p>}
             </form>
