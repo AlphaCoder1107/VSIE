@@ -1,0 +1,4 @@
+# Supabase Edge Functions config
+# Allow unauthenticated access to image-proxy so <img> tags can call it without headers.
+[functions.image-proxy]
+verify_jwt = false
