@@ -52,9 +52,6 @@ export default function Navbar() {
                     {item.name}
                   </Link>
                 ))}
-                {isManager && (
-                  <Link href="/ops" className="hover:text-white transition-colors">Manager</Link>
-                )}
                 <Link href="/apply" className="rounded-xl px-4 py-2 bg-vsie-accent text-white font-medium shadow hover:-translate-y-0.5 transition">Apply now</Link>
               </div>
               <div className="md:hidden">
@@ -73,9 +70,6 @@ export default function Navbar() {
                   {item.name}
                 </Link>
               ))}
-              {isManager && (
-                <Link href="/ops" className="block rounded-md px-3 py-2 text-base text-white hover:bg-white/10">Manager</Link>
-              )}
               <Link href="/apply" className="block rounded-md px-3 py-2 text-base bg-vsie-accent text-white font-medium">Apply now</Link>
             </div>
           </Disclosure.Panel>
