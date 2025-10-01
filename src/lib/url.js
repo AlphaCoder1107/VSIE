@@ -9,7 +9,8 @@ export function assetUrl(path) {
         const sup = new URL(supa)
         // If it's our own Supabase Storage public URL, load it directly (no proxy)
         if (u.host === sup.host && u.pathname.startsWith('/storage/v1/object/public/')) {
-          return path
+          const sep = path.includes('?') ? '&' : '?'
+          return `${path}${sep}t=${Date.now()}`
         }
       } catch { /* fall through to proxy */ }
       // Otherwise proxy external hosts for reliability
