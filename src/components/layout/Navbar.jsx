@@ -3,7 +3,6 @@ import { assetUrl } from '@/lib/url'
 import { useEffect, useState } from 'react'
 import { Disclosure } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
-import { supabase } from '@/lib/supabaseClient'
 
 const nav = [
   { name: 'Home', href: '/' },
@@ -13,9 +12,8 @@ const nav = [
   { name: 'Admin', href: '/admin/login' }
 ]
 
-export default function Navbar({ skipManagerProbe = false }) {
+export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
-  const [isManager, setIsManager] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -24,33 +22,7 @@ export default function Navbar({ skipManagerProbe = false }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Probe manager capability: if ops-list-events returns ok, show Manager link
-  useEffect(() => {
-    if (skipManagerProbe) return
-    let mounted = true
-    const check = async () => {
-      try {
-        const { data } = await supabase.auth.getSession()
-        const token = data?.session?.access_token
-        if (!token) { if (mounted) setIsManager(false); return }
-        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ops-list-events`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({})
-        })
-        if (!mounted) return
-        if (res.ok) {
-          const out = await res.json().catch(() => ({}))
-          setIsManager(!!out?.ok)
-        } else {
-          setIsManager(false)
-        }
-      } catch { if (mounted) setIsManager(false) }
-    }
-    check()
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, _s) => check())
-    return () => { mounted = false; sub?.subscription?.unsubscribe?.() }
-  }, [skipManagerProbe])
+  // No manager probe from navbar; manager access is handled from Admin page
 
   return (
     <Disclosure as="nav" className={`fixed inset-x-0 top-0 z-50 transition-colors ${scrolled ? 'bg-vsie-900/80 backdrop-blur supports-[backdrop-filter]:bg-vsie-900/60' : 'bg-transparent'}`}>

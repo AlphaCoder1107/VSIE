@@ -239,6 +239,26 @@ export default function AdminHome() {
               {session ? (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-white/70">Signed in as {session?.user?.email}</span>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = session?.access_token
+                        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ops-list-events`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                          body: JSON.stringify({ activeOnly: false })
+                        })
+                        if (res.ok) {
+                          window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/ops`
+                        } else {
+                          alert('You are not a manager. Ask an admin to add your email to EVENT_MANAGER_EMAILS.')
+                        }
+                      } catch (e) {
+                        alert('Manager check failed. Please try again later.')
+                      }
+                    }}
+                    className="rounded-xl px-4 py-2 bg-white/10 text-white"
+                  >Manager</button>
                   <button onClick={signOut} className="rounded-xl px-4 py-2 bg-white/10 text-white">Sign out</button>
                 </div>
               ) : (

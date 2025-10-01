@@ -59,7 +59,7 @@ export default function AdminLogin() {
         <meta name="robots" content="noindex" />
       </Head>
       <div className="min-h-screen bg-vsie-900">
-  <Navbar skipManagerProbe={true} />
+  <Navbar />
         <main className="py-24">
           <div className="container max-w-md">
             <h1 className="text-3xl font-bold mb-6">Admin Login</h1>
