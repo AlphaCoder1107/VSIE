@@ -69,9 +69,9 @@ export default function OpsEvents() {
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
                   <div className="text-white/70 text-sm mb-2">Create / Update Event</div>
                   <div className="grid md:grid-cols-4 gap-2">
-                    <input value={form.slug} onChange={(e)=>setForm({...form, slug: e.target.value})} placeholder="slug (unique, e.g., ai-hackathon-nov-2025)" className="rounded-lg bg-white text-black px-3 py-2 text-sm" />
-                    <input value={form.name} onChange={(e)=>setForm({...form, name: e.target.value})} placeholder="name (optional)" className="rounded-lg bg-white text-black px-3 py-2 text-sm" />
-                    <input value={form.price_paise} onChange={(e)=>setForm({...form, price_paise: e.target.value})} placeholder="price_paise (optional)" className="rounded-lg bg-white text-black px-3 py-2 text-sm" />
+                    <input value={form.slug} onChange={(e)=>setForm({...form, slug: e.target.value})} placeholder="slug (unique, e.g., ai-hackathon-nov-2025)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                    <input value={form.name} onChange={(e)=>setForm({...form, name: e.target.value})} placeholder="name (optional)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                    <input value={form.price_paise} onChange={(e)=>setForm({...form, price_paise: e.target.value})} placeholder="price_paise (optional)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.active} onChange={(e)=>setForm({...form, active: e.target.checked})} /> Active</label>
                   </div>
                   <div className="mt-3"><button onClick={()=>upsert({ ...form, price_paise: form.price_paise ? Number(form.price_paise) : undefined })} className="px-3 py-2 rounded-lg bg-vsie-accent text-white">Save</button></div>
@@ -105,7 +105,7 @@ export default function OpsEvents() {
                                   value={form.name}
                                   onChange={(e)=>setForm(f=>({...f, name:e.target.value}))}
                                   placeholder="name"
-                                  className="rounded bg-white text-black px-2 py-1 text-xs w-44"
+                                  className="rounded bg-white !text-black placeholder-black/60 px-2 py-1 text-xs w-44"
                                 />
                               ) : (
                                 ev.name || '—'
@@ -123,7 +123,7 @@ export default function OpsEvents() {
                                       setForm(f=>({...f, price_paise: val === '' ? '' : Math.round((isNaN(rupees)?0:rupees)*100)}))
                                     }}
                                     placeholder="0.00"
-                                    className="rounded bg-white text-black px-2 py-1 text-xs w-24"
+                                    className="rounded bg-white !text-black placeholder-black/60 px-2 py-1 text-xs w-24"
                                   />
                                 </div>
                               ) : (
