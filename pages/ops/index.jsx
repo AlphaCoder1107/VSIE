@@ -87,13 +87,17 @@ export default function OpsEvents() {
                             if (!file) return
                             try {
                               setUploading(true)
-                              const ext = file.name.split('.').pop() || 'jpg'
-                              const pathname = `events/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-                              const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'attachments'
-                              const { data, error } = await supabase.storage.from(bucket).upload(pathname, file, { upsert: true, cacheControl: '3600' })
-                              if (error) throw error
-                              const { data: pub } = supabase.storage.from(bucket).getPublicUrl(pathname)
-                              if (pub?.publicUrl) setForm(f=>({...f, image_url: pub.publicUrl}))
+                              const fd = new FormData()
+                              fd.append('file', file)
+                              fd.append('slug', form.slug || editingSlug || 'misc')
+                              const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ops-upload-image`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${session.access_token}` },
+                                body: fd
+                              })
+                              const out = await res.json()
+                              if (!res.ok || !out?.ok) throw new Error(out?.error || `Upload failed (${res.status})`)
+                              if (out.publicUrl) setForm(f=>({...f, image_url: out.publicUrl}))
                             } catch (err) {
                               alert(`Upload failed: ${err?.message || err}`)
                             } finally {
