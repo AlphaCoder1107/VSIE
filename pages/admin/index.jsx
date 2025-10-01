@@ -268,8 +268,28 @@ export default function AdminHome() {
             {session && (
               <div className="mb-6">
                 <h2 className="text-xl font-semibold mb-3">Seminar overview</h2>
-                <div className="mb-3">
+                <div className="mb-3 flex items-center gap-3 flex-wrap">
                   <Link href="/admin/checkin" className="inline-flex items-center rounded-xl px-4 py-2 bg-vsie-accent text-white text-sm">Open QR Check-in</Link>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = session?.access_token
+                        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ops-list-events`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                          body: JSON.stringify({ activeOnly: false })
+                        })
+                        if (res.ok) {
+                          window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/ops`
+                        } else {
+                          alert('You are not a manager. Ask an admin to add your email to EVENT_MANAGER_EMAILS.')
+                        }
+                      } catch (e) {
+                        alert('Manager check failed. Please try again later.')
+                      }
+                    }}
+                    className="inline-flex items-center rounded-xl px-4 py-2 bg-white/10 text-white text-sm"
+                  >Manager</button>
                 </div>
                 {loadingEvents ? (
                   <p className="text-white/60 text-sm">Loading events…</p>
