@@ -30,9 +30,9 @@ export default function Home({ startups, events }) {
         <main id="main">
           <Hero />
           <FeatureSplit />
-             <Section title="Upcoming events" description="Join our workshops, hackathons, and demo days.">
-               <CardGrid items={liveEvents} type="events" />
-             </Section>
+         <Section title="Upcoming events" description="Join our workshops, hackathons, and demo days.">
+           <CardGrid items={liveEvents} type="events" />
+         </Section>
              <Section title="Featured startups" description="A glimpse of ventures incubated at VIC.">
                <CardGrid items={startups} type="startups" />
              </Section>

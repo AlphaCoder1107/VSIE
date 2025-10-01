@@ -1,9 +1,15 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { assetUrl } from '@/lib/url'
+import { getEventSlugs } from '@/lib/data'
+
+const staticEventSlugs = new Set(getEventSlugs ? getEventSlugs() : [])
 
 function Card({ item, type }) {
-  const href = type === 'events' ? `/events/${item.slug}` : `/startups/${item.slug}`
+  let href = `/startups/${item.slug}`
+  if (type === 'events') {
+    href = staticEventSlugs.has(item.slug) ? `/events/${encodeURIComponent(item.slug)}` : `/events/view?slug=${encodeURIComponent(item.slug)}`
+  }
   return (
     <Link href={href} className="group rounded-2xl bg-vsie-800/60 border border-white/10 p-5 hover:bg-white/5 transition block">
       {item.image && (
@@ -23,7 +29,7 @@ function Card({ item, type }) {
         </div>
         {type === 'events' && (
           <div className="mt-4">
-            <Link href={`/events/${item.slug}#register`} className="inline-block rounded-lg px-3 py-1.5 bg-vsie-accent text-white text-sm">Register now</Link>
+            <Link href={`${href}#register`} className="inline-block rounded-lg px-3 py-1.5 bg-vsie-accent text-white text-sm">Register now</Link>
           </div>
         )}
       </div>
