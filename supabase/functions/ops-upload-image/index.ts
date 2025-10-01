@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.4'
 
 const SUPABASE_URL = (globalThis as any).Deno?.env.get('SUPABASE_URL') as string
 const SERVICE_ROLE_KEY = (globalThis as any).Deno?.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
-const DEFAULT_BUCKET = ((globalThis as any).Deno?.env.get('NEXT_PUBLIC_SUPABASE_BUCKET') as string) || 'attachments'
+const DEFAULT_BUCKET = 'events'
 const MANAGER_EMAILS: string[] = String(((globalThis as any).Deno?.env.get('EVENT_MANAGER_EMAILS')) || '')
   .split(',').map((s: string) => s.trim().toLowerCase()).filter((s: string) => !!s)
 
@@ -52,7 +52,7 @@ serve(async (req: Request) => {
   if (!slug) return json({ error: 'missing-slug' }, { status: 400 })
 
   const ext = (file.name?.split('.')?.pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
-  const key = `events/${slug}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+  const key = `events/${slug}/cover.${ext}`
 
   const { data, error } = await supabaseAdmin.storage.from(bucket).upload(key, await file.arrayBuffer(), {
     contentType: file.type || `image/${ext}`,

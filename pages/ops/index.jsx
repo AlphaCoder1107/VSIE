@@ -81,7 +81,7 @@ export default function OpsEvents() {
                     <div className="mt-3 grid md:grid-cols-2 gap-2">
                       <div className="flex gap-2 items-start">
                         <input value={form.image_url} onChange={(e)=>setForm({...form, image_url: e.target.value})} placeholder="image_url (public URL or /images/...)" className="flex-1 rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
-                        <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white text-sm cursor-pointer">
+                        <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white text-sm cursor-pointer" title="Uploads to events/<slug>/cover.jpg">
                           <input type="file" accept="image/*" className="hidden" onChange={async (e)=>{
                             const file = e.target.files?.[0]
                             if (!file) return

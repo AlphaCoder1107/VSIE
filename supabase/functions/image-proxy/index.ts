@@ -87,9 +87,14 @@ serve(async (req: Request) => {
         const bucket = parts.shift() || ''
         const objectPath = decodeURIComponent(parts.join('/'))
         if (bucket && objectPath) {
-          const { data: signed, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(objectPath, 3600)
-          if (!error && signed?.signedUrl) {
-            imgUrl = signed.signedUrl
+          const dl = await supabaseAdmin.storage.from(bucket).download(objectPath)
+          if (!dl.error && dl.data) {
+            const ctGuess = (dl.data as any).type || 'image/jpeg'
+            const headers = corsHeaders()
+            headers.set('Cache-Control', 'public, max-age=600')
+            headers.set('Content-Type', ctGuess)
+            const ab = await (dl.data as any).arrayBuffer()
+            return new Response(ab, { status: 200, headers })
           }
         }
       }
