@@ -51,8 +51,14 @@ serve(async (req: Request) => {
   if (!file) return json({ error: 'missing-file' }, { status: 400 })
   if (!slug) return json({ error: 'missing-slug' }, { status: 400 })
 
+  // Ensure bucket exists (idempotent)
+  try {
+    await supabaseAdmin.storage.createBucket(bucket, { public: true })
+  } catch (_) { /* ignore if exists */ }
+
   const ext = (file.name?.split('.')?.pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
-  const key = `events/${slug}/cover.${ext}`
+  // Always overwrite a single stable key so space is not wasted by multiple objects
+  const key = `events/${slug}/cover`
 
   const { data, error } = await supabaseAdmin.storage.from(bucket).upload(key, await file.arrayBuffer(), {
     contentType: file.type || `image/${ext}`,
