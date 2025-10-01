@@ -16,6 +16,7 @@ const EMAIL_FROM = (globalThis as any).Deno?.env.get('EMAIL_FROM') as string | u
 const EMAIL_FROM_NAME = (globalThis as any).Deno?.env.get('EMAIL_FROM_NAME') as string | undefined
 const REPLY_TO = (globalThis as any).Deno?.env.get('REPLY_TO') as string | undefined
 const VERIFY_BASE_URL = (globalThis as any).Deno?.env.get('VERIFY_BASE_URL') as string | undefined
+const TICKET_URL_BASE = (globalThis as any).Deno?.env.get('TICKET_URL_BASE') as string | undefined
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
@@ -102,15 +103,16 @@ serve(async (req: Request) => {
   // 3) Send email via SendGrid
   if (!(SENDGRID_API_KEY && EMAIL_FROM)) return json({ error: 'email-not-configured', ok: false }, { status: 500 })
   const subject = `Your VIC Ticket - ${row.registration_code}`
+  const ticketLink = (TICKET_URL_BASE || 'https://vic.college/ticket') + `?code=${encodeURIComponent(row.registration_code)}&id=${encodeURIComponent(String(row.id))}`
   const html = `
     <p>Hi ${row.student_name || 'Participant'},</p>
     <p>Thanks for registering for <b>${row.event_slug}</b>.</p>
     <p>Your registration code: <b>${row.registration_code}</b></p>
     <p><img src="cid:qr-image" alt="QR" style="max-width:320px"/></p>
     <p>Present this QR at the entry. Keep this email handy on event day.</p>
-    <p>If the image doesn't load, your QR is attached as a PNG and available at: ${qrUrl}</p>
+    <p><a href="${ticketLink}">View your ticket online</a> if you need to re-open the QR later.</p>
   `
-  const text = `Hi ${row.student_name || 'Participant'},\n\nThanks for registering for ${row.event_slug}.\nYour registration code: ${row.registration_code}.\nOpen this link to view your QR: ${qrUrl}\n\nPresent this at entry.\n`
+  const text = `Hi ${row.student_name || 'Participant'},\n\nThanks for registering for ${row.event_slug}.\nYour registration code: ${row.registration_code}.\nView your ticket: ${ticketLink}\n\nPresent this at entry.\n`
 
   let attachContent: string | undefined
   if (pngBytes) attachContent = btoa(String.fromCharCode(...pngBytes))
@@ -127,7 +129,9 @@ serve(async (req: Request) => {
       { content: attachContent, filename: `${sanitizeFileName(row.registration_code || `reg-${row.id}`)}.png`, type: 'image/png', disposition: 'inline', content_id: 'qr-image' },
       { content: attachContent, filename: `${sanitizeFileName(row.registration_code || `reg-${row.id}`)}.png`, type: 'image/png', disposition: 'attachment' }
     ] : undefined,
-    tracking_settings: { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false } }
+  tracking_settings: { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false } },
+  mail_settings: { bypass_list_management: { enable: true } },
+  categories: ['transactional','ticket']
   }
   if (REPLY_TO) payload.reply_to = { email: REPLY_TO }
 
