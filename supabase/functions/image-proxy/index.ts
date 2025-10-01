@@ -22,11 +22,15 @@ function isProbablyHtml(contentType?: string | null) {
 }
 
 async function fetchWithUA(url: string) {
+  let referer = 'https://www.google.com/'
+  try { referer = new URL(url).origin + '/' } catch {}
   return await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
       'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-      'Accept-Language': 'en'
+      'Accept-Language': 'en',
+      'Referer': referer,
+      'Cache-Control': 'no-cache'
     },
     redirect: 'follow'
   })
@@ -71,10 +75,10 @@ serve(async (req: Request) => {
     const resp = await fetchWithUA(imgUrl)
     if (!resp.ok) return new Response('Fetch failed', { status: 502, headers: corsHeaders() })
 
-    const headers = corsHeaders({ headers: resp.headers })
-    headers.set('Cache-Control', 'public, max-age=600')
-    // Normalize content-type for images
-    const ct = resp.headers.get('content-type') || 'image/jpeg'
+  const headers = corsHeaders({ headers: resp.headers })
+  headers.set('Cache-Control', 'public, max-age=600')
+  // Normalize content-type for images
+  const ct = (resp.headers.get('content-type') || '').split(';')[0] || 'image/jpeg'
     headers.set('Content-Type', ct)
     // Remove security headers that might block fetch
     headers.delete('content-security-policy')

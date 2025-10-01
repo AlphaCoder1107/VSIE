@@ -13,6 +13,7 @@ export default function OpsEvents() {
   const [form, setForm] = useState({ slug: '', name: '', price_paise: '', active: true, image_url: '', title: '', excerpt: '', date: '', location: '' })
   const [editingSlug, setEditingSlug] = useState('')
   const [showMore, setShowMore] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
@@ -78,7 +79,31 @@ export default function OpsEvents() {
                   <button className="mt-3 text-xs underline text-white/70" onClick={()=>setShowMore(v=>!v)}>{showMore ? 'Hide' : 'More'} fields</button>
                   {showMore && (
                     <div className="mt-3 grid md:grid-cols-2 gap-2">
-                      <input value={form.image_url} onChange={(e)=>setForm({...form, image_url: e.target.value})} placeholder="image_url (public URL or /images/...)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                      <div className="flex gap-2 items-start">
+                        <input value={form.image_url} onChange={(e)=>setForm({...form, image_url: e.target.value})} placeholder="image_url (public URL or /images/...)" className="flex-1 rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                        <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white text-sm cursor-pointer">
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e)=>{
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            try {
+                              setUploading(true)
+                              const ext = file.name.split('.').pop() || 'jpg'
+                              const pathname = `events/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+                              const bucket = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'attachments'
+                              const { data, error } = await supabase.storage.from(bucket).upload(pathname, file, { upsert: true, cacheControl: '3600' })
+                              if (error) throw error
+                              const { data: pub } = supabase.storage.from(bucket).getPublicUrl(pathname)
+                              if (pub?.publicUrl) setForm(f=>({...f, image_url: pub.publicUrl}))
+                            } catch (err) {
+                              alert(`Upload failed: ${err?.message || err}`)
+                            } finally {
+                              setUploading(false)
+                              e.target.value = ''
+                            }
+                          }} />
+                          {uploading ? 'Uploading…' : 'Upload'}
+                        </label>
+                      </div>
                       <input value={form.title} onChange={(e)=>setForm({...form, title: e.target.value})} placeholder="title (display)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
                       <input value={form.excerpt} onChange={(e)=>setForm({...form, excerpt: e.target.value})} placeholder="excerpt (short description)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
                       <input value={form.date} onChange={(e)=>setForm({...form, date: e.target.value})} placeholder="date (YYYY-MM-DD)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
