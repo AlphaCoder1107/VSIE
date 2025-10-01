@@ -10,8 +10,9 @@ export default function OpsEvents() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
-  const [form, setForm] = useState({ slug: '', name: '', price_paise: '', active: true })
+  const [form, setForm] = useState({ slug: '', name: '', price_paise: '', active: true, image_url: '', title: '', excerpt: '', date: '', location: '' })
   const [editingSlug, setEditingSlug] = useState('')
+  const [showMore, setShowMore] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
@@ -74,6 +75,16 @@ export default function OpsEvents() {
                     <input value={form.price_paise} onChange={(e)=>setForm({...form, price_paise: e.target.value})} placeholder="price_paise (optional)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.active} onChange={(e)=>setForm({...form, active: e.target.checked})} /> Active</label>
                   </div>
+                  <button className="mt-3 text-xs underline text-white/70" onClick={()=>setShowMore(v=>!v)}>{showMore ? 'Hide' : 'More'} fields</button>
+                  {showMore && (
+                    <div className="mt-3 grid md:grid-cols-2 gap-2">
+                      <input value={form.image_url} onChange={(e)=>setForm({...form, image_url: e.target.value})} placeholder="image_url (public URL or /images/...)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                      <input value={form.title} onChange={(e)=>setForm({...form, title: e.target.value})} placeholder="title (display)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                      <input value={form.excerpt} onChange={(e)=>setForm({...form, excerpt: e.target.value})} placeholder="excerpt (short description)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                      <input value={form.date} onChange={(e)=>setForm({...form, date: e.target.value})} placeholder="date (YYYY-MM-DD)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                      <input value={form.location} onChange={(e)=>setForm({...form, location: e.target.value})} placeholder="location (e.g., Main Auditorium)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                    </div>
+                  )}
                   <div className="mt-3"><button onClick={()=>upsert({ ...form, price_paise: form.price_paise ? Number(form.price_paise) : undefined })} className="px-3 py-2 rounded-lg bg-vsie-accent text-white">Save</button></div>
                 </div>
 
@@ -144,18 +155,18 @@ export default function OpsEvents() {
                                 {editingSlug === ev.slug ? (
                                   <>
                                     <button
-                                      onClick={()=>upsert({ slug: ev.slug, name: form.name || null, price_paise: form.price_paise === '' ? null : Number(form.price_paise), active: !!form.active })}
+                                      onClick={()=>upsert({ slug: ev.slug, name: form.name || null, price_paise: form.price_paise === '' ? null : Number(form.price_paise), active: !!form.active, image_url: form.image_url || null, title: form.title || null, excerpt: form.excerpt || null, date: form.date || null, location: form.location || null })}
                                       className="px-2 py-1 rounded bg-vsie-accent text-white text-xs"
                                     >Save</button>
                                     <button
-                                      onClick={()=>{ setEditingSlug(''); setForm({ slug: '', name: '', price_paise: '', active: true }) }}
+                                      onClick={()=>{ setEditingSlug(''); setForm({ slug: '', name: '', price_paise: '', active: true, image_url: '', title: '', excerpt: '', date: '', location: '' }) }}
                                       className="px-2 py-1 rounded bg-white/10 text-xs"
                                     >Cancel</button>
                                   </>
                                 ) : (
                                   <>
                                     <button
-                                      onClick={()=>{ setEditingSlug(ev.slug); setForm({ slug: ev.slug, name: ev.name || '', price_paise: ev.price_paise ?? '', active: !!ev.active }) }}
+                                      onClick={()=>{ setEditingSlug(ev.slug); setShowMore(false); setForm({ slug: ev.slug, name: ev.name || '', price_paise: ev.price_paise ?? '', active: !!ev.active, image_url: ev.image_url || '', title: ev.title || '', excerpt: ev.excerpt || '', date: ev.date || '', location: ev.location || '' }) }}
                                       className="px-2 py-1 rounded bg-white/10 text-xs"
                                     >Edit</button>
                                     <button onClick={()=>upsert({ slug: ev.slug, active: !ev.active })} className="px-2 py-1 rounded bg-white/10 text-xs">{ev.active ? 'Disable' : 'Enable'}</button>

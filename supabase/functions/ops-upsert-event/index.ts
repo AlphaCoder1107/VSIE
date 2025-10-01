@@ -36,17 +36,24 @@ serve(async (req: Request) => {
   if (MANAGER_EMAILS.length > 0 && !MANAGER_EMAILS.includes(email)) return json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json().catch(() => ({}))
-  let { slug, name, price_paise, active } = body || {}
+  let { slug, name, price_paise, active, image_url, title, excerpt, date, location } = body || {}
   slug = (slug || '').trim()
   if (!slug) return json({ error: 'missing-slug' }, { status: 400 })
   if (price_paise != null) price_paise = Number(price_paise) || 0
   if (active == null) active = true
   active = !!active
 
+  const payload: any = { slug, name, price_paise, active }
+  if (image_url !== undefined) payload.image_url = String(image_url)
+  if (title !== undefined) payload.title = String(title)
+  if (excerpt !== undefined) payload.excerpt = String(excerpt)
+  if (date !== undefined) payload.date = String(date)
+  if (location !== undefined) payload.location = String(location)
+
   const { data, error } = await supabaseAdmin
     .from('seminar_events')
-    .upsert({ slug, name, price_paise, active }, { onConflict: 'slug' })
-    .select('slug, name, price_paise, active, created_at')
+    .upsert(payload, { onConflict: 'slug' })
+    .select('slug, name, price_paise, active, created_at, image_url, title, excerpt, date, location')
     .single()
   if (error) return json({ error: error.message }, { status: 500 })
   return json({ ok: true, event: data })

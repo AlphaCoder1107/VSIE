@@ -85,7 +85,7 @@ serve(async (req: Request) => {
   const activeOnly = await getActiveOnly(req)
   let q = supabaseAdmin
     .from('seminar_events')
-    .select('slug, name, price_paise, active, created_at')
+    .select('slug, name, price_paise, active, created_at, image_url, title, excerpt, date, location')
     .order('created_at', { ascending: false })
   if (activeOnly) q = q.eq('active', true)
 
