@@ -17,6 +17,7 @@ function json(body: unknown, init: ResponseInit = {}) {
   headers.set('Access-Control-Allow-Origin', '*')
   headers.set('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type')
   headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  headers.set('Cache-Control', 'no-store')
   return new Response(JSON.stringify(body), { ...init, headers })
 }
 
@@ -38,7 +39,6 @@ serve(async (req: Request) => {
     .from('seminar_events')
     .select('slug, name, price_paise, active')
     .eq('slug', slug)
-    .eq('active', true)
     .single()
 
   if (error) return json({ error: error.message }, { status: 404 })

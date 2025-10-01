@@ -18,6 +18,7 @@ function json(body: unknown, init: ResponseInit = {}) {
   headers.set('Access-Control-Allow-Origin', '*')
   headers.set('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type')
   headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  headers.set('Cache-Control', 'no-store')
   return new Response(JSON.stringify(body), { ...init, headers })
 }
 
@@ -40,6 +41,7 @@ serve(async (req: Request) => {
   if (!slug) return json({ error: 'missing-slug' }, { status: 400 })
   if (price_paise != null) price_paise = Number(price_paise) || 0
   if (active == null) active = true
+  active = !!active
 
   const { data, error } = await supabaseAdmin
     .from('seminar_events')

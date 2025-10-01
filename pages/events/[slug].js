@@ -38,7 +38,7 @@ export default function EventDetail({ event }) {
     let stop = false
     const fetchLive = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event?slug=${encodeURIComponent(event.slug)}`)
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event?slug=${encodeURIComponent(event.slug)}&t=${Date.now()}`, { cache: 'no-store' })
         const out = await res.json()
         if (!stop && res.ok && out?.event) {
           setServerPricePaise(out.event.price_paise ?? null)
@@ -161,7 +161,7 @@ export default function EventDetail({ event }) {
             </article>
             <aside className="lg:col-span-4">
               <div className="sticky top-24 space-y-4 max-w-sm mx-auto w-full">
-                <button onClick={() => { setShowModal(true); setStatus('') }} className="block w-full text-center rounded-xl px-6 py-3 bg-vsie-accent text-white font-semibold shadow hover:-translate-y-0.5 transition">Register now</button>
+                <button onClick={() => { setShowModal(true); setStatus('') }} disabled={!isActive} className="block w-full text-center rounded-xl px-6 py-3 bg-vsie-accent text-white font-semibold shadow hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed">{isActive ? 'Register now' : 'Registrations closed'}</button>
                 <div className="rounded-xl bg-vsie-800/60 border border-white/10 p-5">
                   <h3 className="font-semibold">Details</h3>
                   <ul className="mt-3 text-vsie-muted space-y-1">
