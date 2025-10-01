@@ -83,14 +83,27 @@ serve(async (req: Request) => {
   }
 
   const activeOnly = await getActiveOnly(req)
-  let q = supabaseAdmin
-    .from('seminar_events')
-    .select('slug, name, price_paise, active, created_at, image_url, title, excerpt, date, location')
-    .order('created_at', { ascending: false })
-  if (activeOnly) q = q.eq('active', true)
+  async function runSelect(full: boolean) {
+    let sel = 'slug, name, price_paise, active, created_at'
+    if (full) sel += ', image_url, title, excerpt, date, location'
+    let q = supabaseAdmin
+      .from('seminar_events')
+      .select(sel)
+      .order('created_at', { ascending: false })
+    if (activeOnly) q = q.eq('active', true)
+    return q
+  }
 
-  const { data, error: dbErr } = await q
-  if (dbErr) return json({ error: dbErr.message }, { status: 500 })
+  let { data, error: dbErr } = await runSelect(true)
+  if (dbErr && /does not exist/i.test(dbErr.message || '')) {
+    // Fallback if new columns aren't present yet
+    const res2 = await runSelect(false)
+    const { data: d2, error: e2 } = await res2
+    if (e2) return json({ error: e2.message }, { status: 500 })
+    data = d2
+  } else if (dbErr) {
+    return json({ error: dbErr.message }, { status: 500 })
+  }
 
   console.log('ops-list-events ok for', email, 'count=', data?.length || 0, 'activeOnly=', activeOnly)
   return json({ ok: true, events: data || [] })

@@ -50,11 +50,24 @@ serve(async (req: Request) => {
   if (date !== undefined) payload.date = String(date)
   if (location !== undefined) payload.location = String(location)
 
-  const { data, error } = await supabaseAdmin
-    .from('seminar_events')
-    .upsert(payload, { onConflict: 'slug' })
-    .select('slug, name, price_paise, active, created_at, image_url, title, excerpt, date, location')
-    .single()
-  if (error) return json({ error: error.message }, { status: 500 })
+  async function doUpsert(sel: string, body: any) {
+    return await supabaseAdmin
+      .from('seminar_events')
+      .upsert(body, { onConflict: 'slug' })
+      .select(sel)
+      .single()
+  }
+
+  let { data, error } = await doUpsert('slug, name, price_paise, active, created_at, image_url, title, excerpt, date, location', payload)
+  const missingCol = (msg: string) => /does not exist/i.test(msg) || /schema cache/i.test(msg) || /Could not find the '.+?' column/i.test(msg)
+  if (error && missingCol(error.message || '')) {
+    // Retry with base fields only when extended columns are missing
+    const basePayload = { slug, name, price_paise, active }
+    const res2 = await doUpsert('slug, name, price_paise, active, created_at', basePayload)
+    if (res2.error) return json({ error: res2.error.message }, { status: 500 })
+    data = res2.data
+  } else if (error) {
+    return json({ error: error.message }, { status: 500 })
+  }
   return json({ ok: true, event: data })
 })

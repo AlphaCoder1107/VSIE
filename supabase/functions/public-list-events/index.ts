@@ -32,13 +32,27 @@ serve(async (req: Request) => {
     }
   } catch {}
 
-  const { data, error } = await supabaseAdmin
-    .from('seminar_events')
-    .select('slug, name, price_paise, active, image_url, date, location, excerpt, title')
-    .eq('active', true)
-    .order('date', { ascending: true, nullsFirst: false })
-    .limit(limit)
+  const missingCol = (msg: string) => /does not exist/i.test(msg) || /schema cache/i.test(msg) || /Could not find the '.+?' column/i.test(msg)
+  async function runSelect(full: boolean) {
+    let sel = 'slug, name, price_paise, active'
+    if (full) sel += ', image_url, date, location, excerpt, title'
+    let q = supabaseAdmin
+      .from('seminar_events')
+      .select(sel)
+      .eq('active', true)
+    // Prefer ordering by date if available, else created_at
+    if (full) q = q.order('date', { ascending: true, nullsFirst: false })
+    else q = q.order('created_at', { ascending: true })
+    return q.limit(limit)
+  }
 
-  if (error) return json({ error: error.message }, { status: 500 })
+  let { data, error } = await runSelect(true)
+  if (error && missingCol(error.message || '')) {
+    const { data: d2, error: e2 } = await runSelect(false)
+    if (e2) return json({ error: e2.message }, { status: 500 })
+    data = d2
+  } else if (error) {
+    return json({ error: error.message }, { status: 500 })
+  }
   return json({ ok: true, events: data || [] })
 })
