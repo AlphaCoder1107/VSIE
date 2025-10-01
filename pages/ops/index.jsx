@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { supabase } from '@/lib/supabaseClient'
+import { assetUrl } from '@/lib/url'
 
 export default function OpsEvents() {
   const [session, setSession] = useState(null)
@@ -112,6 +113,14 @@ export default function OpsEvents() {
                       <input value={form.excerpt} onChange={(e)=>setForm({...form, excerpt: e.target.value})} placeholder="excerpt (short description)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
                       <input value={form.date} onChange={(e)=>setForm({...form, date: e.target.value})} placeholder="date (YYYY-MM-DD)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
                       <input value={form.location} onChange={(e)=>setForm({...form, location: e.target.value})} placeholder="location (e.g., Main Auditorium)" className="rounded-lg bg-white !text-black placeholder-black/60 px-3 py-2 text-sm" />
+                    </div>
+                  )}
+                  {showMore && form.image_url && (
+                    <div className="mt-3">
+                      <div className="text-white/70 text-sm mb-1">Preview</div>
+                      <div className="rounded-xl overflow-hidden border border-white/10 max-w-xl">
+                        <img src={assetUrl(form.image_url)} alt="Preview" className="w-full h-auto" style={{aspectRatio:'16/9', objectFit:'cover'}} />
+                      </div>
                     </div>
                   )}
                   <div className="mt-3"><button onClick={()=>upsert({ ...form, price_paise: form.price_paise ? Number(form.price_paise) : undefined })} className="px-3 py-2 rounded-lg bg-vsie-accent text-white">Save</button></div>
