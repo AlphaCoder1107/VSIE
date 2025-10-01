@@ -38,7 +38,14 @@ export default function EventDetail({ event }) {
     let stop = false
     const fetchLive = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event?slug=${encodeURIComponent(event.slug)}&t=${Date.now()}`, { cache: 'no-store' })
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event?slug=${encodeURIComponent(event.slug)}&t=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+          }
+        })
         const out = await res.json()
         if (!stop && res.ok && out?.event) {
           setServerPricePaise(out.event.price_paise ?? null)
@@ -63,7 +70,11 @@ export default function EventDetail({ event }) {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+        },
         body: JSON.stringify({ slug: event.slug })
       })
       const out = await res.json()
@@ -184,6 +195,9 @@ export default function EventDetail({ event }) {
           <div className="bg-white text-black rounded-xl w-full max-w-lg p-5 relative">
             <button onClick={() => setShowModal(false)} className="absolute right-3 top-3 text-black/60">✕</button>
             <h3 className="text-xl font-semibold text-black">Seminar Registration {serverPricePaise != null ? `(₹${(serverPricePaise/100).toFixed(2)})` : '(₹10)'}</h3>
+            {!isActive && (
+              <p className="mt-2 text-sm text-red-600">Registrations are currently closed for this event.</p>
+            )}
             <form onSubmit={onSubmit} className="mt-3 space-y-3">
               <input type="hidden" value={event.slug} />
               <div>
@@ -235,7 +249,7 @@ export default function EventDetail({ event }) {
               </div>
               <div className="flex items-center justify-between pt-2">
                 <button type="button" onClick={()=>setShowModal(false)} className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={!canSubmit || submitting} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">{submitting ? 'Processing…' : 'Pay ₹10 & Register'}</button>
+                <button type="submit" disabled={!canSubmit || submitting || !isActive} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">{submitting ? 'Processing…' : 'Pay ₹10 & Register'}</button>
               </div>
               {status && <p className="text-sm text-black mt-2">{status}</p>}
             </form>
