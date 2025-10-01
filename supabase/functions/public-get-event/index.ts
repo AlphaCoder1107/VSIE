@@ -1,7 +1,9 @@
 // @ts-nocheck
 // Supabase Edge Function: public-get-event
-// Purpose: Publicly readable endpoint to fetch a single active event's info (slug, name, price_paise, active)
-// Security: Only returns events where active = true. No auth required.
+// Purpose: Publicly readable endpoint to fetch a single event's info.
+// Returns base fields always (slug, name, price_paise, active) and, when present,
+// extended display fields (image_url, title, excerpt, date, location).
+// We do NOT enforce active=true here so the page can show "Registrations closed" UI.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.4'
@@ -35,12 +37,26 @@ serve(async (req: Request) => {
   }
   if (!slug) return json({ error: 'missing-slug' }, { status: 400 })
 
-  const { data, error } = await supabaseAdmin
-    .from('seminar_events')
-    .select('slug, name, price_paise, active')
-    .eq('slug', slug)
-    .single()
+  const missingCol = (msg: string) => /does not exist/i.test(msg) || /schema cache/i.test(msg) || /Could not find the '.+?' column/i.test(msg)
 
-  if (error) return json({ error: error.message }, { status: 404 })
+  async function runSelect(full: boolean) {
+    const sel = full
+      ? 'slug, name, price_paise, active, image_url, title, excerpt, date, location'
+      : 'slug, name, price_paise, active'
+    return await supabaseAdmin
+      .from('seminar_events')
+      .select(sel)
+      .eq('slug', slug)
+      .single()
+  }
+
+  let { data, error } = await runSelect(true)
+  if (error && missingCol(error.message || '')) {
+    const { data: d2, error: e2 } = await runSelect(false)
+    if (e2) return json({ error: e2.message }, { status: 404 })
+    data = d2
+  } else if (error) {
+    return json({ error: error.message }, { status: 404 })
+  }
   return json({ ok: true, event: data })
 })
