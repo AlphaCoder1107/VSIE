@@ -6,8 +6,16 @@ import Hero from '@/components/sections/Hero'
 import FeatureSplit from '@/components/sections/FeatureSplit'
 import CardGrid from '@/components/sections/CardGrid'
 import { getFeaturedStartups, getUpcomingEvents } from '@/lib/data'
+import { useEffect, useState } from 'react'
+import { fetchPublicEvents } from '@/lib/publicEvents'
 
 export default function Home({ startups, events }) {
+  const [liveEvents, setLiveEvents] = useState(events)
+  useEffect(() => {
+    fetchPublicEvents(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 50)
+      .then((rows) => { if (rows && rows.length) setLiveEvents(rows) })
+      .catch(() => {})
+  }, [])
   return (
     <>
       <Head>
@@ -23,7 +31,7 @@ export default function Home({ startups, events }) {
           <Hero />
           <FeatureSplit />
              <Section title="Upcoming events" description="Join our workshops, hackathons, and demo days.">
-               <CardGrid items={events} type="events" />
+               <CardGrid items={liveEvents} type="events" />
              </Section>
              <Section title="Featured startups" description="A glimpse of ventures incubated at VIC.">
                <CardGrid items={startups} type="startups" />

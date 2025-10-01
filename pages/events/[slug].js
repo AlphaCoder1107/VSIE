@@ -16,6 +16,13 @@ export default function EventDetail({ event }) {
   const [submitting, setSubmitting] = useState(false)
   const [serverPricePaise, setServerPricePaise] = useState(null)
   const [isActive, setIsActive] = useState(true)
+  const [display, setDisplay] = useState({
+    title: event.title,
+    excerpt: event.excerpt,
+    date: event.date,
+    location: event.location,
+    image: event.image
+  })
 
   // Load Razorpay script on client
   useEffect(() => {
@@ -50,6 +57,13 @@ export default function EventDetail({ event }) {
         if (!stop && res.ok && out?.event) {
           setServerPricePaise(out.event.price_paise ?? null)
           setIsActive(!!out.event.active)
+          setDisplay((d)=>({
+            title: out.event.title || out.event.name || d.title,
+            excerpt: out.event.excerpt ?? d.excerpt,
+            date: out.event.date || d.date,
+            location: out.event.location || d.location,
+            image: out.event.image_url || d.image
+          }))
         }
       } catch { /* ignore */ }
     }
@@ -161,13 +175,13 @@ export default function EventDetail({ event }) {
         <main id="main" className="py-24">
           <div className="container grid lg:grid-cols-12 gap-10">
             <article className="lg:col-span-8">
-              <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{event.title}</h1>
-              <p className="mt-3 text-vsie-muted">{event.date} • {event.location}</p>
+              <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{display.title}</h1>
+              <p className="mt-3 text-vsie-muted">{display.date} • {display.location}</p>
               <div className="mt-8 rounded-2xl overflow-hidden border border-white/10">
-                <Image src={assetUrl(event.image)} alt="Event cover" width={1200} height={630} className="w-full h-auto" />
+                <Image src={assetUrl(display.image)} alt="Event cover" width={1200} height={630} className="w-full h-auto" />
               </div>
               <div className="prose prose-invert mt-8 max-w-none">
-                <p>{event.description}</p>
+                <p>{display.excerpt || event.description}</p>
               </div>
             </article>
             <aside className="lg:col-span-4">
@@ -176,9 +190,9 @@ export default function EventDetail({ event }) {
                 <div className="rounded-xl bg-vsie-800/60 border border-white/10 p-5">
                   <h3 className="font-semibold">Details</h3>
                   <ul className="mt-3 text-vsie-muted space-y-1">
-                    <li><strong>Date:</strong> {event.date}</li>
+                    <li><strong>Date:</strong> {display.date}</li>
                     <li><strong>Time:</strong> {event.time}</li>
-                    <li><strong>Venue:</strong> {event.location}</li>
+                    <li><strong>Venue:</strong> {display.location}</li>
                     {serverPricePaise != null && <li><strong>Price:</strong> ₹{(serverPricePaise/100).toFixed(2)}</li>}
                     {!isActive && <li className="text-red-400"><strong>Registrations closed</strong></li>}
                   </ul>
