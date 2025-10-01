@@ -14,6 +14,8 @@ export default function EventDetail({ event }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', college: '', year: '' })
   const [status, setStatus] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [serverPricePaise, setServerPricePaise] = useState(null)
+  const [isActive, setIsActive] = useState(true)
 
   // Load Razorpay script on client
   useEffect(() => {
@@ -31,6 +33,24 @@ export default function EventDetail({ event }) {
     if (window.location.hash === '#register') setShowModal(true)
   }, [])
 
+  // Fetch live event config (price, active) from Supabase Edge Function
+  useEffect(() => {
+    let stop = false
+    const fetchLive = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event?slug=${encodeURIComponent(event.slug)}`)
+        const out = await res.json()
+        if (!stop && res.ok && out?.event) {
+          setServerPricePaise(out.event.price_paise ?? null)
+          setIsActive(!!out.event.active)
+        }
+      } catch { /* ignore */ }
+    }
+    fetchLive()
+    const t = setInterval(fetchLive, 60_000) // periodic refresh
+    return () => { stop = true; clearInterval(t) }
+  }, [event.slug])
+
   const canSubmit = useMemo(() => {
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
     const nameOk = form.name.trim().length >= 2
@@ -39,8 +59,29 @@ export default function EventDetail({ event }) {
 
   async function openCheckout() {
     setStatus('Creating order...')
+    // Ensure latest price and active state before creating order
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: event.slug })
+      })
+      const out = await res.json()
+      if (!res.ok || !out?.event) {
+        setStatus('Registrations are currently closed for this event.')
+        return null
+      }
+      setServerPricePaise(out.event.price_paise ?? null)
+      setIsActive(!!out.event.active)
+      if (!out.event.active) {
+        setStatus('Registrations are closed for this event.')
+        return null
+      }
+    } catch { /* continue with default */ }
+
+    const amountPaise = serverPricePaise != null ? Number(serverPricePaise) : 1000
     const { data, error } = await supabase.functions.invoke('seminar-create-order', {
-      body: { amount_paise: 1000, receipt: `sem-reg-${Date.now()}` }
+      body: { amount_paise: amountPaise, receipt: `sem-reg-${Date.now()}` }
     })
     if (error || !data?.order || !data?.key_id) {
       setStatus('Failed to create order. Please try again.')
@@ -127,6 +168,8 @@ export default function EventDetail({ event }) {
                     <li><strong>Date:</strong> {event.date}</li>
                     <li><strong>Time:</strong> {event.time}</li>
                     <li><strong>Venue:</strong> {event.location}</li>
+                    {serverPricePaise != null && <li><strong>Price:</strong> ₹{(serverPricePaise/100).toFixed(2)}</li>}
+                    {!isActive && <li className="text-red-400"><strong>Registrations closed</strong></li>}
                   </ul>
                 </div>
               </div>
@@ -140,7 +183,7 @@ export default function EventDetail({ event }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white text-black rounded-xl w-full max-w-lg p-5 relative">
             <button onClick={() => setShowModal(false)} className="absolute right-3 top-3 text-black/60">✕</button>
-            <h3 className="text-xl font-semibold text-black">Seminar Registration (₹10)</h3>
+            <h3 className="text-xl font-semibold text-black">Seminar Registration {serverPricePaise != null ? `(₹${(serverPricePaise/100).toFixed(2)})` : '(₹10)'}</h3>
             <form onSubmit={onSubmit} className="mt-3 space-y-3">
               <input type="hidden" value={event.slug} />
               <div>

@@ -11,6 +11,7 @@ export default function OpsEvents() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [form, setForm] = useState({ slug: '', name: '', price_paise: '', active: true })
+  const [editingSlug, setEditingSlug] = useState('')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null))
@@ -46,6 +47,7 @@ export default function OpsEvents() {
       if (!res.ok || !out.ok) throw new Error(out?.error || `Failed (${res.status})`)
       await load()
       setForm({ slug: '', name: '', price_paise: '', active: true })
+      setEditingSlug('')
     } catch (e) { alert(String(e?.message || e)) }
   }
 
@@ -95,15 +97,70 @@ export default function OpsEvents() {
                       </thead>
                       <tbody>
                         {events.map(ev => (
-                          <tr key={ev.slug} className="border-t border-white/10">
+                          <tr key={ev.slug} className="border-t border-white/10 align-top">
                             <td className="py-2 pr-4 font-mono">{ev.slug}</td>
-                            <td className="py-2 pr-4">{ev.name || '—'}</td>
-                            <td className="py-2 pr-4">{((ev.price_paise ?? 0) / 100).toFixed(2)}</td>
-                            <td className="py-2 pr-4">{ev.active ? 'true' : 'false'}</td>
+                            <td className="py-2 pr-4">
+                              {editingSlug === ev.slug ? (
+                                <input
+                                  value={form.name}
+                                  onChange={(e)=>setForm(f=>({...f, name:e.target.value}))}
+                                  placeholder="name"
+                                  className="rounded bg-white text-black px-2 py-1 text-xs w-44"
+                                />
+                              ) : (
+                                ev.name || '—'
+                              )}
+                            </td>
+                            <td className="py-2 pr-4">
+                              {editingSlug === ev.slug ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-white/70 text-xs">₹</span>
+                                  <input
+                                    value={form.price_paise === '' || form.price_paise == null ? '' : String((Number(form.price_paise)||0)/100)}
+                                    onChange={(e)=>{
+                                      const val = e.target.value
+                                      const rupees = val === '' ? '' : Number(val)
+                                      setForm(f=>({...f, price_paise: val === '' ? '' : Math.round((isNaN(rupees)?0:rupees)*100)}))
+                                    }}
+                                    placeholder="0.00"
+                                    className="rounded bg-white text-black px-2 py-1 text-xs w-24"
+                                  />
+                                </div>
+                              ) : (
+                                ((ev.price_paise ?? 0) / 100).toFixed(2)
+                              )}
+                            </td>
+                            <td className="py-2 pr-4">
+                              {editingSlug === ev.slug ? (
+                                <label className="inline-flex items-center gap-2 text-xs">
+                                  <input type="checkbox" checked={!!form.active} onChange={(e)=>setForm(f=>({...f, active:e.target.checked}))} /> Active
+                                </label>
+                              ) : (
+                                ev.active ? 'true' : 'false'
+                              )}
+                            </td>
                             <td className="py-2 pr-4">
                               <div className="flex items-center gap-2">
-                                <button onClick={()=>setForm({ slug: ev.slug, name: ev.name || '', price_paise: ev.price_paise ?? '', active: !!ev.active })} className="px-2 py-1 rounded bg-white/10 text-xs">Edit</button>
-                                <button onClick={()=>upsert({ slug: ev.slug, active: !ev.active })} className="px-2 py-1 rounded bg-white/10 text-xs">{ev.active ? 'Disable' : 'Enable'}</button>
+                                {editingSlug === ev.slug ? (
+                                  <>
+                                    <button
+                                      onClick={()=>upsert({ slug: ev.slug, name: form.name || null, price_paise: form.price_paise === '' ? null : Number(form.price_paise), active: !!form.active })}
+                                      className="px-2 py-1 rounded bg-vsie-accent text-white text-xs"
+                                    >Save</button>
+                                    <button
+                                      onClick={()=>{ setEditingSlug(''); setForm({ slug: '', name: '', price_paise: '', active: true }) }}
+                                      className="px-2 py-1 rounded bg-white/10 text-xs"
+                                    >Cancel</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={()=>{ setEditingSlug(ev.slug); setForm({ slug: ev.slug, name: ev.name || '', price_paise: ev.price_paise ?? '', active: !!ev.active }) }}
+                                      className="px-2 py-1 rounded bg-white/10 text-xs"
+                                    >Edit</button>
+                                    <button onClick={()=>upsert({ slug: ev.slug, active: !ev.active })} className="px-2 py-1 rounded bg-white/10 text-xs">{ev.active ? 'Disable' : 'Enable'}</button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>
