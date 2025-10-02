@@ -41,6 +41,14 @@ function EventDetailRuntime({ event }) {
   const [submitting, setSubmitting] = useState(false)
   const [serverPricePaise, setServerPricePaise] = useState(null)
   const [isActive, setIsActive] = useState(true)
+  const [forceFree, setForceFree] = useState(false)
+  const numericPricePaise = useMemo(() => {
+    if (serverPricePaise == null) return null
+    const n = Number(serverPricePaise)
+    return Number.isFinite(n) ? n : null
+  }, [serverPricePaise])
+  const isFree = numericPricePaise === 0
+  const isFreeEffective = forceFree || isFree
   const [display, setDisplay] = useState({
     title: event.title,
     excerpt: event.excerpt,
@@ -63,6 +71,10 @@ function EventDetailRuntime({ event }) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.location.hash === '#register') setShowModal(true)
+    try {
+      const usp = new URLSearchParams(window.location.search)
+      if (usp.get('free') === '1') setForceFree(true)
+    } catch {}
   }, [])
 
   // Fetch live event config (price, active, display fields)
@@ -100,7 +112,9 @@ function EventDetailRuntime({ event }) {
   const canSubmit = useMemo(() => {
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
     const nameOk = form.name.trim().length >= 2
-    return nameOk && emailOk
+    const digits = (form.phone || '').replace(/\D/g, '')
+    const phoneOk = digits.length >= 10
+    return nameOk && emailOk && phoneOk
   }, [form])
 
   async function openCheckout() {
@@ -118,8 +132,21 @@ function EventDetailRuntime({ event }) {
       })
       const out = await res.json()
       if (!res.ok || !out?.event) {
-        setStatus('Registrations are currently closed for this event.')
-        return null
+        // Fallback to GET
+        const res2 = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event?slug=${encodeURIComponent(event.slug)}&t=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+          }
+        })
+        const out2 = await res2.json()
+        if (!res2.ok || !out2?.event) {
+          setStatus('Registrations are currently closed for this event.')
+          return null
+        }
+        out.event = out2.event
       }
       setServerPricePaise(out.event.price_paise ?? null)
       setIsActive(!!out.event.active)
@@ -127,13 +154,24 @@ function EventDetailRuntime({ event }) {
         setStatus('Registrations are closed for this event.')
         return null
       }
+      const livePrice = Number(out.event.price_paise ?? NaN)
+      if (Number.isFinite(livePrice)) setServerPricePaise(livePrice)
+      if (forceFree || (Number.isFinite(livePrice) && livePrice <= 0)) {
+        return { free: true }
+      }
     } catch { /* continue with default */ }
 
-    const amountPaise = serverPricePaise != null ? Number(serverPricePaise) : 1000
+    const amountPaise = numericPricePaise != null ? numericPricePaise : 1000
+    if (forceFree || !(amountPaise > 0)) {
+      return { free: true }
+    }
     const { data, error } = await supabase.functions.invoke('seminar-create-order', {
       body: { amount_paise: amountPaise, receipt: `sem-reg-${Date.now()}` }
     })
     if (error || !data?.order || !data?.key_id) {
+      if (forceFree || numericPricePaise === 0) {
+        return { free: true }
+      }
       setStatus('Failed to create order. Please try again.')
       return null
     }
@@ -147,8 +185,30 @@ function EventDetailRuntime({ event }) {
     setSubmitting(true)
     setStatus('')
     try {
+      // Early guard for free
+      if (isFreeEffective) {
+        setStatus('Registering for free...')
+        const { data: freeRes, error: freeErr } = await supabase.functions.invoke('seminar-register-free', {
+          body: { student: { ...form, event_slug: event.slug }, recaptcha_token: null }
+        })
+        if (freeErr || !freeRes?.ok) { setStatus('Registration failed. Please try again in a moment.'); return }
+        setStatus(`Registered! Your entry no: ${freeRes.registration_code}. A ticket has been emailed to you.`)
+        setTimeout(() => setShowModal(false), 2500)
+        return
+      }
+
       const created = await openCheckout()
       if (!created) return
+      if (created.free || isFreeEffective) {
+        setStatus('Registering for free...')
+        const { data: freeRes, error: freeErr } = await supabase.functions.invoke('seminar-register-free', {
+          body: { student: { ...form, event_slug: event.slug }, recaptcha_token: null }
+        })
+        if (freeErr || !freeRes?.ok) { setStatus('Registration failed. Please try again in a moment.'); return }
+        setStatus(`Registered! Your entry no: ${freeRes.registration_code}. A ticket has been emailed to you.`)
+        setTimeout(() => setShowModal(false), 2500)
+        return
+      }
       const { order, key_id } = created
 
       const options = {
@@ -236,7 +296,7 @@ function EventDetailRuntime({ event }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white text-black rounded-xl w-full max-w-lg p-5 relative">
             <button onClick={() => setShowModal(false)} className="absolute right-3 top-3 text-black/60">✕</button>
-            <h3 className="text-xl font-semibold text-black">Seminar Registration {serverPricePaise != null ? `(₹${(serverPricePaise/100).toFixed(2)})` : '(₹10)'}</h3>
+            <h3 className="text-xl font-semibold text-black">Seminar Registration {numericPricePaise != null ? (isFreeEffective ? '(Free)' : `(₹${(numericPricePaise/100).toFixed(2)})`) : '(₹10)'}</h3>
             {!isActive && (
               <p className="mt-2 text-sm text-red-600">Registrations are currently closed for this event.</p>
             )}
@@ -294,7 +354,7 @@ function EventDetailRuntime({ event }) {
                 <button type="submit" disabled={!canSubmit || submitting || !isActive} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">
                   {submitting
                     ? 'Processing…'
-                    : `Pay ₹${(((serverPricePaise ?? 1000) / 100)).toFixed(2)} & Register`}
+                    : (isFreeEffective ? 'Register for Free' : `Pay ₹${(((numericPricePaise ?? 1000) / 100)).toFixed(2)} & Register`)}
                 </button>
               </div>
               {status && <p className="text-sm text-black mt-2">{status}</p>}
