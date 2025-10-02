@@ -16,7 +16,13 @@ export default function EventDetail({ event }) {
   const [submitting, setSubmitting] = useState(false)
   const [serverPricePaise, setServerPricePaise] = useState(null)
   const [isActive, setIsActive] = useState(true)
-  const isFree = serverPricePaise === 0
+  // Coerce to number to handle values like "0" from API
+  const numericPricePaise = useMemo(() => {
+    if (serverPricePaise == null) return null
+    const n = Number(serverPricePaise)
+    return Number.isFinite(n) ? n : null
+  }, [serverPricePaise])
+  const isFree = numericPricePaise === 0
   const [display, setDisplay] = useState({
     title: event.title,
     excerpt: event.excerpt,
@@ -105,13 +111,19 @@ export default function EventDetail({ event }) {
         setStatus('Registrations are closed for this event.')
         return null
       }
-      if ((out.event.price_paise ?? null) === 0) {
+      const livePrice = Number(out.event.price_paise ?? NaN)
+      if (Number.isFinite(livePrice)) setServerPricePaise(livePrice)
+      if (Number.isFinite(livePrice) && livePrice <= 0) {
         // Free event – no Razorpay order should be created
         return { free: true }
       }
     } catch { /* continue with default */ }
 
-    const amountPaise = serverPricePaise != null ? Number(serverPricePaise) : 1000
+    const amountPaise = numericPricePaise != null ? numericPricePaise : 1000
+    if (!(amountPaise > 0)) {
+      // Safety: if price resolves to 0 or invalid, go through free path
+      return { free: true }
+    }
     const { data, error } = await supabase.functions.invoke('seminar-create-order', {
       body: { amount_paise: amountPaise, receipt: `sem-reg-${Date.now()}` }
     })
@@ -219,7 +231,7 @@ export default function EventDetail({ event }) {
                     <li><strong>Date:</strong> {display.date}</li>
                     <li><strong>Time:</strong> {event.time}</li>
                     <li><strong>Venue:</strong> {display.location}</li>
-                    {serverPricePaise != null && <li><strong>Price:</strong> ₹{(serverPricePaise/100).toFixed(2)}</li>}
+                    {numericPricePaise != null && <li><strong>Price:</strong> ₹{(numericPricePaise/100).toFixed(2)}</li>}
                     {!isActive && <li className="text-red-400"><strong>Registrations closed</strong></li>}
                   </ul>
                 </div>
@@ -234,7 +246,7 @@ export default function EventDetail({ event }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white text-black rounded-xl w-full max-w-lg p-5 relative">
             <button onClick={() => setShowModal(false)} className="absolute right-3 top-3 text-black/60">✕</button>
-            <h3 className="text-xl font-semibold text-black">Seminar Registration {serverPricePaise != null ? (isFree ? '(Free)' : `(₹${(serverPricePaise/100).toFixed(2)})`) : '(₹10)'}</h3>
+            <h3 className="text-xl font-semibold text-black">Seminar Registration {numericPricePaise != null ? (isFree ? '(Free)' : `(₹${(numericPricePaise/100).toFixed(2)})`) : '(₹10)'}</h3>
             {!isActive && (
               <p className="mt-2 text-sm text-red-600">Registrations are currently closed for this event.</p>
             )}
@@ -298,7 +310,7 @@ export default function EventDetail({ event }) {
                 <button type="submit" disabled={!canSubmit || submitting || !isActive} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">
                   {submitting
                     ? 'Processing…'
-                    : (isFree ? 'Register for Free' : `Pay ₹${(((serverPricePaise ?? 1000) / 100)).toFixed(2)} & Register`)}
+                    : (isFree ? 'Register for Free' : `Pay ₹${(((numericPricePaise ?? 1000) / 100)).toFixed(2)} & Register`)}
                 </button>
               </div>
               {status && <p className="text-sm text-black mt-2">{status}</p>}
