@@ -102,8 +102,21 @@ export default function EventDetail({ event }) {
       })
       const out = await res.json()
       if (!res.ok || !out?.event) {
-        setStatus('Registrations are currently closed for this event.')
-        return null
+        // Fallback to GET in case POST path is blocked
+        const res2 = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/public-get-event?slug=${encodeURIComponent(event.slug)}&t=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+          }
+        })
+        const out2 = await res2.json()
+        if (!res2.ok || !out2?.event) {
+          setStatus('Registrations are currently closed for this event.')
+          return null
+        }
+        out.event = out2.event
       }
       setServerPricePaise(out.event.price_paise ?? null)
       setIsActive(!!out.event.active)
@@ -128,6 +141,10 @@ export default function EventDetail({ event }) {
       body: { amount_paise: amountPaise, receipt: `sem-reg-${Date.now()}` }
     })
     if (error || !data?.order || !data?.key_id) {
+      // If the price is actually free, fall back to free registration path
+      if (numericPricePaise === 0) {
+        return { free: true }
+      }
       setStatus('Failed to create order. Please try again.')
       return null
     }
