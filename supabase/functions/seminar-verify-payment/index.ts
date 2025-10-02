@@ -6,6 +6,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.4'
 // QR generation (Node lib via esm.sh works in Deno with polyfills)
 import QRCode from 'https://esm.sh/qrcode@1.5.3'
+import { jsPDF } from 'https://esm.sh/jspdf@2.5.1'
 
 const SUPABASE_URL = (globalThis as any).Deno?.env.get('SUPABASE_URL') as string
 const SERVICE_ROLE_KEY = (globalThis as any).Deno?.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
@@ -19,6 +20,7 @@ const EMAIL_FROM_NAME = (globalThis as any).Deno?.env.get('EMAIL_FROM_NAME') as 
 const REPLY_TO = (globalThis as any).Deno?.env.get('REPLY_TO') as string | undefined
 const VERIFY_BASE_URL = (globalThis as any).Deno?.env.get('VERIFY_BASE_URL') as string | undefined
 const TICKET_URL_BASE = (globalThis as any).Deno?.env.get('TICKET_URL_BASE') as string | undefined
+const SEPARATE_RECEIPT_EMAIL = String(((globalThis as any).Deno?.env.get('SEPARATE_RECEIPT_EMAIL')) || '').toLowerCase() === 'true'
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
@@ -150,7 +152,7 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
         { type: 'text/plain', value: text },
         { type: 'text/html', value: html }
       ],
-      // Inline the QR via CID and also attach as a file
+      // Inline the QR via CID; avoid duplicate image attachment to reduce size
       attachments: [
         {
           content: btoa(String.fromCharCode(...pngBytes)),
@@ -158,12 +160,6 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
           type: 'image/png',
           disposition: 'inline',
           content_id: 'qr-image'
-        },
-        {
-          content: btoa(String.fromCharCode(...pngBytes)),
-          filename: `${sanitizeFileName(code)}.png`,
-          type: 'image/png',
-          disposition: 'attachment'
         }
       ],
       // Reduce spam signals
@@ -201,6 +197,45 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
   }
 
   return { uploaded: true, emailed }
+}
+
+function formatINR(paise: number) {
+  const rupees = (Number(paise || 0) / 100).toFixed(2)
+  return `₹${rupees}`
+}
+
+async function buildReceiptPdf({
+  org = EMAIL_FROM_NAME || 'VIC',
+  code,
+  event_slug,
+  amount_paise,
+  student_name,
+  student_email,
+  student_phone,
+  razorpay_order_id,
+  razorpay_payment_id,
+  txn_date
+}: any): Promise<Uint8Array> {
+  const doc = new jsPDF()
+  const left = 14
+  let y = 18
+  doc.setFontSize(16)
+  doc.text(`${org} — Payment Receipt`, left, y)
+  y += 8
+  doc.setFontSize(11)
+  doc.text(`Receipt No: ${code}`, left, y); y += 6
+  doc.text(`Event: ${event_slug}`, left, y); y += 6
+  doc.text(`Amount: ${formatINR(amount_paise)}`, left, y); y += 10
+  doc.text(`Name: ${student_name || '-'}`, left, y); y += 6
+  doc.text(`Email: ${student_email || '-'}`, left, y); y += 6
+  doc.text(`Phone: ${student_phone || '-'}`, left, y); y += 10
+  doc.text(`Razorpay Order ID: ${razorpay_order_id}`, left, y); y += 6
+  doc.text(`Razorpay Payment ID: ${razorpay_payment_id}`, left, y); y += 6
+  doc.text(`Date: ${txn_date}`, left, y); y += 10
+  doc.setFontSize(9)
+  doc.text('This is a system-generated receipt. Please retain for your records.', left, y)
+  const ab = doc.output('arraybuffer') as ArrayBuffer
+  return new Uint8Array(ab)
 }
 
 serve(async (req: Request) => {
@@ -262,7 +297,7 @@ serve(async (req: Request) => {
     }
     console.log('[seminar-verify] inserted', { id: data?.id, code: data?.registration_code })
 
-    // 4) Generate QR, upload, and send email (best-effort; do not fail payment if this fails)
+    // 4) Generate QR, upload, and send ticket email, then send a receipt (best-effort)
     try {
       await uploadQrAndEmail({
         id: data?.id,
@@ -271,6 +306,58 @@ serve(async (req: Request) => {
         student_name: insertPayload.student_name,
         event_slug: insertPayload.event_slug
       })
+      // Build receipt PDF and send as attachment
+      if (SENDGRID_API_KEY && EMAIL_FROM && insertPayload.student_email) {
+        const pdfBytes = await buildReceiptPdf({
+          code: data?.registration_code,
+          event_slug: insertPayload.event_slug,
+          amount_paise: insertPayload.amount_paise,
+          student_name: insertPayload.student_name,
+          student_email: insertPayload.student_email,
+          student_phone: insertPayload.student_phone,
+          razorpay_order_id,
+          razorpay_payment_id,
+          txn_date: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+        })
+
+        const basePayload: any = {
+          personalizations: [{ to: [{ email: insertPayload.student_email }] }],
+          from: EMAIL_FROM_NAME ? { email: EMAIL_FROM, name: EMAIL_FROM_NAME } : { email: EMAIL_FROM },
+          subject: `Payment Receipt — ${data?.registration_code}`,
+          content: [
+            { type: 'text/plain', value: `Thanks for your payment for ${insertPayload.event_slug}. Receipt attached. Registration code: ${data?.registration_code}.` },
+            { type: 'text/html', value: `<p>Thanks for your payment for <b>${insertPayload.event_slug}</b>.</p><p>Registration code: <b>${data?.registration_code}</b></p><p>Receipt attached as PDF.</p>` }
+          ],
+          attachments: [
+            {
+              content: btoa(String.fromCharCode(...pdfBytes)),
+              filename: `receipt_${sanitizeFileName(String(data?.registration_code || 'ticket'))}.pdf`,
+              type: 'application/pdf',
+              disposition: 'attachment'
+            }
+          ],
+          tracking_settings: { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false } },
+          mail_settings: { bypass_list_management: { enable: true } },
+          categories: ['transactional','receipt']
+        }
+        if (REPLY_TO) basePayload.reply_to = { email: REPLY_TO }
+
+        if (SEPARATE_RECEIPT_EMAIL) {
+          await fetch('https://api.sendgrid.com/v3/mail/send', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(basePayload)
+          })
+        } else {
+          // If not separate, we can alternatively include PDF in ticket email — already sent above.
+          // For now, send as a follow-up in the same thread via same subject prefix.
+          await fetch('https://api.sendgrid.com/v3/mail/send', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(basePayload)
+          })
+        }
+      }
     } catch (postErr) {
       // log and continue; payment is already successful and row inserted
       console.error('[seminar-verify] post-process failed', postErr)
