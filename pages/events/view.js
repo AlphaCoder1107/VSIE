@@ -169,6 +169,8 @@ function EventDetailRuntime({ event }) {
       body: { amount_paise: amountPaise, receipt: `sem-reg-${Date.now()}` }
     })
     if (error || !data?.order || !data?.key_id) {
+      if (error) console.error('seminar-create-order error:', error)
+      if (data && !data.order) console.error('seminar-create-order missing order:', data)
       if (forceFree || numericPricePaise === 0) {
         return { free: true }
       }
@@ -325,6 +327,11 @@ function EventDetailRuntime({ event }) {
                 <div>
                   <label className="text-sm text-black">Phone</label>
                   <input
+                    type="tel"
+                    inputMode="tel"
+                    required
+                    title="Please enter a valid phone number with at least 10 digits."
+                    placeholder="e.g. 9876543210"
                     className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 !text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.phone}
                     onChange={(e)=>setForm(f=>({...f, phone:e.target.value}))}

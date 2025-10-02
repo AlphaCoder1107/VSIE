@@ -148,6 +148,8 @@ export default function EventDetail({ event }) {
       body: { amount_paise: amountPaise, receipt: `sem-reg-${Date.now()}` }
     })
     if (error || !data?.order || !data?.key_id) {
+      if (error) console.error('seminar-create-order error:', error)
+      if (data && !data.order) console.error('seminar-create-order missing order:', data)
       // If the price is actually free, fall back to free registration path
       if (forceFree || numericPricePaise === 0) {
         return { free: true }
@@ -317,7 +319,6 @@ export default function EventDetail({ event }) {
                     type="tel"
                     inputMode="tel"
                     required
-                    pattern="[0-9+\-()\s]{10,}"
                     title="Please enter a valid phone number with at least 10 digits."
                     placeholder="e.g. 9876543210"
                     className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 !text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
