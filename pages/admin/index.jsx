@@ -332,12 +332,6 @@ export default function AdminHome() {
             </div>
             {session && (
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-3">Diagnostics</h2>
-                <AdminDiagnostics session={session} />
-              </div>
-            )}
-            {session && (
-              <div className="mb-6">
                 <h2 className="text-xl font-semibold mb-3">Seminar overview</h2>
                 <div className="mb-3 flex items-center gap-3 flex-wrap">
                   <Link href="/admin/checkin" className="inline-flex items-center rounded-xl px-4 py-2 bg-vsie-accent text-white text-sm">Open QR Check-in</Link>

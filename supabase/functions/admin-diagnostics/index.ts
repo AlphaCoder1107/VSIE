@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.4'
 
 const SUPABASE_URL = (globalThis as any).Deno?.env.get('SUPABASE_URL') as string
 const SERVICE_ROLE_KEY = (globalThis as any).Deno?.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
-const ADMIN_EMAILS: string[] = String(((globalThis as any).Deno?.env.get('ADMIN_EMAILS')) || '')
+const MANAGER_EMAILS: string[] = String(((globalThis as any).Deno?.env.get('EVENT_MANAGER_EMAILS')) || '')
   .split(',').map((s: string) => s.trim().toLowerCase()).filter((s: string) => !!s)
 const RAZORPAY_KEY_ID = (globalThis as any).Deno?.env.get('RAZORPAY_KEY_ID') as string | undefined
 const RAZORPAY_KEY_SECRET = (globalThis as any).Deno?.env.get('RAZORPAY_KEY_SECRET') as string | undefined
@@ -35,7 +35,7 @@ serve(async (req: Request) => {
   const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token)
   if (userErr || !userData?.user?.email) return json({ error: 'Unauthorized' }, { status: 401 })
   const email = userData.user.email.toLowerCase()
-  if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(email)) return json({ error: 'Forbidden' }, { status: 403 })
+  if (MANAGER_EMAILS.length > 0 && !MANAGER_EMAILS.includes(email)) return json({ error: 'Forbidden' }, { status: 403 })
 
   // Optional inputs
   let slug = ''
@@ -89,16 +89,17 @@ serve(async (req: Request) => {
     }
   } catch (e) { report.checks.push({ name: 'function:public-get-event', ok: false, error: String(e) }); report.ok = false }
 
-  // 4) Optional: tiny dummy create-order (1 paise) to check credentials end-to-end (not chargeable; order only)
+  // 4) Optional: tiny dummy create-order to check credentials end-to-end (order only)
   try {
     const r = await fetch(`${SUPABASE_URL}/functions/v1/seminar-create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SERVICE_ROLE_KEY, 'Authorization': `Bearer ${SERVICE_ROLE_KEY}` },
-      body: JSON.stringify({ amount_paise: 1, receipt: `diag-${Date.now()}` })
+      // Use 100 paise (₹1.00) — some gateways reject ultra-low values like 1 paise
+      body: JSON.stringify({ amount_paise: 100, receipt: `diag-${Date.now()}` })
     })
     const body = await r.json().catch(()=>null)
     const ok = r.ok && !!body?.order?.id && !!body?.key_id
-    report.checks.push({ name: 'function:seminar-create-order', ok, status: r.status, orderOk: !!body?.order?.id })
+    report.checks.push({ name: 'function:seminar-create-order', ok, status: r.status, orderOk: !!body?.order?.id, message: body?.error || null })
     if (!ok) report.ok = false
   } catch (e) { report.checks.push({ name: 'function:seminar-create-order', ok: false, error: String(e) }); report.ok = false }
 
