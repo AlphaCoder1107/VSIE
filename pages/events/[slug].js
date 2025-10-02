@@ -141,6 +141,21 @@ export default function EventDetail({ event }) {
     setSubmitting(true)
     setStatus('')
     try {
+      // Early guard: if UI already knows it's free, skip any order creation
+      if (isFree) {
+        setStatus('Registering for free...')
+        const { data: freeRes, error: freeErr } = await supabase.functions.invoke('seminar-register-free', {
+          body: { student: { ...form, event_slug: event.slug }, recaptcha_token: null }
+        })
+        if (freeErr || !freeRes?.ok) {
+          setStatus('Registration failed. Please try again in a moment.')
+          return
+        }
+        setStatus(`Registered! Your entry no: ${freeRes.registration_code}. A ticket has been emailed to you.`)
+        setTimeout(() => setShowModal(false), 2500)
+        return
+      }
+
       const created = await openCheckout()
       if (!created) return
 
