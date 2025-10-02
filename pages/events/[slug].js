@@ -16,6 +16,7 @@ export default function EventDetail({ event }) {
   const [submitting, setSubmitting] = useState(false)
   const [serverPricePaise, setServerPricePaise] = useState(null)
   const [isActive, setIsActive] = useState(true)
+  const isFree = serverPricePaise === 0
   const [display, setDisplay] = useState({
     title: event.title,
     excerpt: event.excerpt,
@@ -104,6 +105,10 @@ export default function EventDetail({ event }) {
         setStatus('Registrations are closed for this event.')
         return null
       }
+      if ((out.event.price_paise ?? null) === 0) {
+        // Free event – no Razorpay order should be created
+        return { free: true }
+      }
     } catch { /* continue with default */ }
 
     const amountPaise = serverPricePaise != null ? Number(serverPricePaise) : 1000
@@ -126,6 +131,25 @@ export default function EventDetail({ event }) {
     try {
       const created = await openCheckout()
       if (!created) return
+
+      // Handle FREE registration path
+      if (created.free || isFree) {
+        setStatus('Registering for free...')
+        const { data: freeRes, error: freeErr } = await supabase.functions.invoke('seminar-register-free', {
+          body: {
+            student: { ...form, event_slug: event.slug },
+            recaptcha_token: null
+          }
+        })
+        if (freeErr || !freeRes?.ok) {
+          setStatus('Registration failed. Please try again in a moment.')
+          return
+        }
+        setStatus(`Registered! Your entry no: ${freeRes.registration_code}. A ticket has been emailed to you.`)
+        setTimeout(() => setShowModal(false), 2500)
+        return
+      }
+
       const { order, key_id } = created
 
       const options = {
@@ -210,7 +234,7 @@ export default function EventDetail({ event }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white text-black rounded-xl w-full max-w-lg p-5 relative">
             <button onClick={() => setShowModal(false)} className="absolute right-3 top-3 text-black/60">✕</button>
-            <h3 className="text-xl font-semibold text-black">Seminar Registration {serverPricePaise != null ? `(₹${(serverPricePaise/100).toFixed(2)})` : '(₹10)'}</h3>
+            <h3 className="text-xl font-semibold text-black">Seminar Registration {serverPricePaise != null ? (isFree ? '(Free)' : `(₹${(serverPricePaise/100).toFixed(2)})`) : '(₹10)'}</h3>
             {!isActive && (
               <p className="mt-2 text-sm text-red-600">Registrations are currently closed for this event.</p>
             )}
@@ -274,7 +298,7 @@ export default function EventDetail({ event }) {
                 <button type="submit" disabled={!canSubmit || submitting || !isActive} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">
                   {submitting
                     ? 'Processing…'
-                    : `Pay ₹${(((serverPricePaise ?? 1000) / 100)).toFixed(2)} & Register`}
+                    : (isFree ? 'Register for Free' : `Pay ₹${(((serverPricePaise ?? 1000) / 100)).toFixed(2)} & Register`)}
                 </button>
               </div>
               {status && <p className="text-sm text-black mt-2">{status}</p>}
