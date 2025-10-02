@@ -33,6 +33,34 @@ export default function EventDetail({ event }) {
     image: event.image
   })
 
+  // Robust invoke: try supabase.functions.invoke first, then fall back to direct fetch with anon headers
+  async function invokeFn(name, body) {
+    try {
+      const { data, error } = await supabase.functions.invoke(name, { body })
+      if (!error && data) return { data }
+      // Log and fall back
+      if (error) console.warn(`[invoke:${name}] supabase invoke error`, error)
+    } catch (e) {
+      console.warn(`[invoke:${name}] supabase invoke threw`, e)
+    }
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/${name}?t=${Date.now()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify(body)
+      })
+      const out = await res.json().catch(()=>null)
+      if (res.ok) return { data: out }
+      return { error: out || { status: res.status } }
+    } catch (e) {
+      return { error: { message: String(e?.message || e) } }
+    }
+  }
+
   // Load Razorpay script on client
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -144,9 +172,7 @@ export default function EventDetail({ event }) {
       // Safety: if price resolves to 0 or invalid, go through free path
       return { free: true }
     }
-    const { data, error } = await supabase.functions.invoke('seminar-create-order', {
-      body: { amount_paise: amountPaise, receipt: `sem-reg-${Date.now()}` }
-    })
+    const { data, error } = await invokeFn('seminar-create-order', { amount_paise: amountPaise, receipt: `sem-reg-${Date.now()}` })
     if (error || !data?.order || !data?.key_id) {
       if (error) console.error('seminar-create-order error:', error)
       if (data && !data.order) console.error('seminar-create-order missing order:', data)
@@ -170,9 +196,7 @@ export default function EventDetail({ event }) {
       // Early guard: if UI already knows it's free, skip any order creation
       if (isFreeEffective) {
         setStatus('Registering for free...')
-        const { data: freeRes, error: freeErr } = await supabase.functions.invoke('seminar-register-free', {
-          body: { student: { ...form, event_slug: event.slug }, recaptcha_token: null }
-        })
+        const { data: freeRes, error: freeErr } = await invokeFn('seminar-register-free', { student: { ...form, event_slug: event.slug }, recaptcha_token: null })
         if (freeErr || !freeRes?.ok) {
           setStatus('Registration failed. Please try again in a moment.')
           return
@@ -188,11 +212,9 @@ export default function EventDetail({ event }) {
       // Handle FREE registration path
       if (created.free || isFreeEffective) {
         setStatus('Registering for free...')
-        const { data: freeRes, error: freeErr } = await supabase.functions.invoke('seminar-register-free', {
-          body: {
-            student: { ...form, event_slug: event.slug },
-            recaptcha_token: null
-          }
+        const { data: freeRes, error: freeErr } = await invokeFn('seminar-register-free', {
+          student: { ...form, event_slug: event.slug },
+          recaptcha_token: null
         })
         if (freeErr || !freeRes?.ok) {
           setStatus('Registration failed. Please try again in a moment.')
@@ -215,13 +237,11 @@ export default function EventDetail({ event }) {
         prefill: { name: form.name, email: form.email, contact: form.phone },
         handler: async (resp) => {
           setStatus('Verifying payment...')
-          const { data: verify, error: vErr } = await supabase.functions.invoke('seminar-verify-payment', {
-            body: {
-              razorpay_payment_id: resp.razorpay_payment_id,
-              razorpay_order_id: resp.razorpay_order_id,
-              razorpay_signature: resp.razorpay_signature,
-              student: { ...form, event_slug: event.slug }
-            }
+          const { data: verify, error: vErr } = await invokeFn('seminar-verify-payment', {
+            razorpay_payment_id: resp.razorpay_payment_id,
+            razorpay_order_id: resp.razorpay_order_id,
+            razorpay_signature: resp.razorpay_signature,
+            student: { ...form, event_slug: event.slug }
           })
           if (vErr || !verify?.ok) {
             setStatus('Payment verification failed. Please contact us if you were charged.')
