@@ -16,6 +16,7 @@ export default function EventDetail({ event }) {
   const [submitting, setSubmitting] = useState(false)
   const [serverPricePaise, setServerPricePaise] = useState(null)
   const [isActive, setIsActive] = useState(true)
+  const [forceFree, setForceFree] = useState(false)
   // Coerce to number to handle values like "0" from API
   const numericPricePaise = useMemo(() => {
     if (serverPricePaise == null) return null
@@ -23,6 +24,7 @@ export default function EventDetail({ event }) {
     return Number.isFinite(n) ? n : null
   }, [serverPricePaise])
   const isFree = numericPricePaise === 0
+  const isFreeEffective = forceFree || isFree
   const [display, setDisplay] = useState({
     title: event.title,
     excerpt: event.excerpt,
@@ -45,6 +47,11 @@ export default function EventDetail({ event }) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.location.hash === '#register') setShowModal(true)
+    // Allow manual override via ?free=1 to bypass payment when debugging or cache issues
+    try {
+      const usp = new URLSearchParams(window.location.search)
+      if (usp.get('free') === '1') setForceFree(true)
+    } catch {}
   }, [])
 
   // Fetch live event config (price, active) from Supabase Edge Function
@@ -126,14 +133,14 @@ export default function EventDetail({ event }) {
       }
       const livePrice = Number(out.event.price_paise ?? NaN)
       if (Number.isFinite(livePrice)) setServerPricePaise(livePrice)
-      if (Number.isFinite(livePrice) && livePrice <= 0) {
+      if (forceFree || (Number.isFinite(livePrice) && livePrice <= 0)) {
         // Free event – no Razorpay order should be created
         return { free: true }
       }
     } catch { /* continue with default */ }
 
     const amountPaise = numericPricePaise != null ? numericPricePaise : 1000
-    if (!(amountPaise > 0)) {
+    if (forceFree || !(amountPaise > 0)) {
       // Safety: if price resolves to 0 or invalid, go through free path
       return { free: true }
     }
@@ -142,7 +149,7 @@ export default function EventDetail({ event }) {
     })
     if (error || !data?.order || !data?.key_id) {
       // If the price is actually free, fall back to free registration path
-      if (numericPricePaise === 0) {
+      if (forceFree || numericPricePaise === 0) {
         return { free: true }
       }
       setStatus('Failed to create order. Please try again.')
@@ -159,7 +166,7 @@ export default function EventDetail({ event }) {
     setStatus('')
     try {
       // Early guard: if UI already knows it's free, skip any order creation
-      if (isFree) {
+      if (isFreeEffective) {
         setStatus('Registering for free...')
         const { data: freeRes, error: freeErr } = await supabase.functions.invoke('seminar-register-free', {
           body: { student: { ...form, event_slug: event.slug }, recaptcha_token: null }
@@ -177,7 +184,7 @@ export default function EventDetail({ event }) {
       if (!created) return
 
       // Handle FREE registration path
-      if (created.free || isFree) {
+      if (created.free || isFreeEffective) {
         setStatus('Registering for free...')
         const { data: freeRes, error: freeErr } = await supabase.functions.invoke('seminar-register-free', {
           body: {
@@ -278,7 +285,7 @@ export default function EventDetail({ event }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white text-black rounded-xl w-full max-w-lg p-5 relative">
             <button onClick={() => setShowModal(false)} className="absolute right-3 top-3 text-black/60">✕</button>
-            <h3 className="text-xl font-semibold text-black">Seminar Registration {numericPricePaise != null ? (isFree ? '(Free)' : `(₹${(numericPricePaise/100).toFixed(2)})`) : '(₹10)'}</h3>
+            <h3 className="text-xl font-semibold text-black">Seminar Registration {numericPricePaise != null ? (isFreeEffective ? '(Free)' : `(₹${(numericPricePaise/100).toFixed(2)})`) : '(₹10)'}</h3>
             {!isActive && (
               <p className="mt-2 text-sm text-red-600">Registrations are currently closed for this event.</p>
             )}
@@ -342,7 +349,7 @@ export default function EventDetail({ event }) {
                 <button type="submit" disabled={!canSubmit || submitting || !isActive} className="px-5 py-2 rounded-md bg-vsie-accent text-white disabled:opacity-60">
                   {submitting
                     ? 'Processing…'
-                    : (isFree ? 'Register for Free' : `Pay ₹${(((numericPricePaise ?? 1000) / 100)).toFixed(2)} & Register`)}
+                    : (isFreeEffective ? 'Register for Free' : `Pay ₹${(((numericPricePaise ?? 1000) / 100)).toFixed(2)} & Register`)}
                 </button>
               </div>
               {status && <p className="text-sm text-black mt-2">{status}</p>}
