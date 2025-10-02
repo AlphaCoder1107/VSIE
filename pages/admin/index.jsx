@@ -6,6 +6,60 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import { supabase } from '@/lib/supabaseClient'
 
+function AdminDiagnostics({ session }) {
+  const [slug, setSlug] = useState('')
+  const [running, setRunning] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+
+  const run = async () => {
+    setRunning(true); setResult(null); setError('')
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-diagnostics`, {
+        method: slug ? 'POST' : 'GET',
+        headers: slug ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` } : { 'Authorization': `Bearer ${session.access_token}` },
+        ...(slug ? { body: JSON.stringify({ slug }) } : {})
+      })
+      const out = await res.json().catch(()=>null)
+      if (!res.ok) throw new Error(out?.error || `Failed (${res.status})`)
+      setResult(out)
+    } catch (e) {
+      setError(String(e?.message || e))
+    }
+    setRunning(false)
+  }
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <input
+          value={slug}
+          onChange={(e)=>setSlug(e.target.value)}
+          placeholder="Optional: event slug to test public-get-event"
+          className="w-full md:w-96 rounded-lg bg-white/10 border border-white/10 px-3 py-2 text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-vsie-accent"
+        />
+        <button onClick={run} disabled={running} className="px-4 py-2 rounded-lg bg-vsie-accent text-white text-sm disabled:opacity-50">Run diagnostics</button>
+      </div>
+      {error && <p className="text-sm text-red-400 mt-3">{error}</p>}
+      {result && (
+        <div className="mt-3 text-sm">
+          <div className={`inline-block px-2 py-1 rounded ${result.ok ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+            Overall: {result.ok ? 'OK' : 'Issues found'}
+          </div>
+          <ul className="mt-3 space-y-2">
+            {Array.isArray(result.checks) && result.checks.map((c, i) => (
+              <li key={i} className={`rounded-lg p-2 border ${c.ok ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200' : 'bg-red-500/10 border-red-500/30 text-red-200'}`}>
+                <div className="font-medium">{c.name}</div>
+                <div className="text-white/70 text-xs break-words">{c.error ? String(c.error) : JSON.stringify({ status: c.status, note: c.note, orderOk: c.orderOk, hasItems: c.hasItems, sample: c.sample })}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminHome() {
   const router = useRouter()
   const [session, setSession] = useState(null)
@@ -276,6 +330,12 @@ export default function AdminHome() {
                 <Link href="/admin/login" className="rounded-xl px-4 py-2 bg-vsie-accent text-white">Login</Link>
               )}
             </div>
+            {session && (
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-3">Diagnostics</h2>
+                <AdminDiagnostics session={session} />
+              </div>
+            )}
             {session && (
               <div className="mb-6">
                 <h2 className="text-xl font-semibold mb-3">Seminar overview</h2>
