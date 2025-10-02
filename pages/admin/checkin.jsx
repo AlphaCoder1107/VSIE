@@ -200,10 +200,10 @@ export default function AdminCheckin() {
     }
     if (status === 'success') {
       return (
-        <div className="mt-4 text-sm bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 rounded-lg p-3">
+        <div className="mt-4 text-sm bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 rounded-lg p-3 break-words whitespace-normal">
           <div className="font-semibold">Checked in successfully</div>
           <div className="mt-1">
-            <span className="text-white/70">Code:</span> <span className="font-mono">{result?.registration_code}</span>
+            <span className="text-white/70">Code:</span> <span className="font-mono break-all">{result?.registration_code}</span>
           </div>
           {result?.checked_in_at && (
             <div className="mt-1"><span className="text-white/70">At:</span> {new Date(result.checked_in_at).toLocaleString()}</div>
@@ -212,7 +212,7 @@ export default function AdminCheckin() {
       )
     }
     if (status === 'error') {
-      return <div className="mt-4 text-sm bg-red-500/10 border border-red-500/40 text-red-300 rounded-lg p-3">{message}</div>
+      return <div className="mt-4 text-sm bg-red-500/10 border border-red-500/40 text-red-300 rounded-lg p-3 break-words whitespace-normal">{message}</div>
     }
     return null
   }
@@ -234,18 +234,18 @@ export default function AdminCheckin() {
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/70 mb-1">Event (restrict scanner to one event)</label>
-                  <div className="flex items-center gap-2">
-                    <select value={eventSlug} onChange={(e)=>setEventSlug(e.target.value)} className="flex-1 rounded-lg bg-white text-black border border-white/10 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <select value={eventSlug} onChange={(e)=>setEventSlug(e.target.value)} className="flex-1 min-w-0 rounded-lg bg-white text-black border border-white/10 px-3 py-2 text-sm">
                       <option value="" style={{ color: '#000' }}>All events (not restricted)</option>
                       {eventSlugs.map(s => (<option key={s} value={s} style={{ color: '#000' }}>{s}</option>))}
                     </select>
-                    <button onClick={refreshEvents} className="px-3 py-2 rounded-lg bg-white/10 text-white">Refresh</button>
+                    <button onClick={refreshEvents} className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm shrink-0">Refresh</button>
                   </div>
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    <button onClick={()=>{ setResult(null); setMessage(''); setStatus('idle'); setScanning(true) }} disabled={scanning} className="px-3 py-2 rounded-lg bg-vsie-accent text-white disabled:opacity-50">Start scanning</button>
-                    <button onClick={()=>setScanning(false)} className="px-3 py-2 rounded-lg bg-white/10 text-white">Stop</button>
+                    <button onClick={()=>{ setResult(null); setMessage(''); setStatus('idle'); setScanning(true) }} disabled={scanning} className="px-3 py-2 rounded-lg bg-vsie-accent text-white disabled:opacity-50 w-full sm:w-auto whitespace-nowrap">Start scanning</button>
+                    <button onClick={()=>setScanning(false)} className="px-3 py-2 rounded-lg bg-white/10 text-white w-full sm:w-auto whitespace-nowrap">Stop</button>
                     {!scanning && (
-                      <button onClick={()=>{ setResult(null); setMessage(''); setStatus('idle'); setScanning(true) }} className="px-3 py-2 rounded-lg bg-white/10 text-white">Scan next</button>
+                      <button onClick={()=>{ setResult(null); setMessage(''); setStatus('idle'); setScanning(true) }} className="px-3 py-2 rounded-lg bg-white/10 text-white w-full sm:w-auto whitespace-nowrap">Scan next</button>
                     )}
                   </div>
                   {statusBox()}

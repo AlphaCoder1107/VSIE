@@ -305,9 +305,9 @@ export default function AdminHome() {
                 {loadingEvents ? (
                   <p className="text-white/60 text-sm">Loading events…</p>
                 ) : events.length ? (
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid gap-4 md:grid-cols-2 justify-items-center">
                     {events.map(ev => (
-                      <div key={ev.event_slug} className="flex items-center gap-4 bg-white/10 border border-white/10 rounded-2xl p-4">
+                      <div key={ev.event_slug} className="w-full max-w-md flex items-center gap-4 bg-white/10 border border-white/10 rounded-2xl p-4">
                         <div className="shrink-0 w-20 h-20 rounded-2xl bg-black/50 grid place-items-center text-white/60 text-xs">IMG</div>
                         <div className="flex-1">
                           <div className="text-lg font-semibold">{ev.event_slug}</div>
@@ -324,7 +324,7 @@ export default function AdminHome() {
                 )}
               </div>
             )}
-            <p className="mb-6 text-xs text-white/50">Only emails in the ADMIN_EMAILS function secret can access data.</p>
+            <p className="mb-6 text-xs text-white/50 text-center">Only emails in the ADMIN_EMAILS function secret can access data.</p>
             {!session ? (
               <p className="text-vsie-muted">Please <Link href="/admin/login" className="underline">log in</Link> to view applications.</p>
             ) : (
