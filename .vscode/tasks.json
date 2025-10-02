@@ -7,6 +7,27 @@
 			"command": "npm install && npm run dev",
 			"isBackground": true,
 			"group": "build"
+		},
+		{
+			"label": "Build Next.js site",
+			"type": "shell",
+			"command": "npm run build",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "build-next",
+			"type": "shell",
+			"command": "npm run build",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
 		}
 	]
 }

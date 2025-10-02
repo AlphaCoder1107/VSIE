@@ -205,6 +205,12 @@ export default function AdminCheckin() {
           <div className="mt-1">
             <span className="text-white/70">Code:</span> <span className="font-mono break-all">{result?.registration_code}</span>
           </div>
+          {result?.student_name && (
+            <div className="mt-1"><span className="text-white/70">Name:</span> {result.student_name}</div>
+          )}
+          {result?.student_phone && (
+            <div className="mt-1"><span className="text-white/70">Phone:</span> <a href={`tel:${result.student_phone}`} className="underline text-emerald-200">{result.student_phone}</a></div>
+          )}
           {result?.checked_in_at && (
             <div className="mt-1"><span className="text-white/70">At:</span> {new Date(result.checked_in_at).toLocaleString()}</div>
           )}
