@@ -91,6 +91,9 @@ export default function AdminSeminarDetail() {
                     <div className="text-sm mt-2">Event: {row.event_slug}</div>
                     <div className="text-sm">Amount: ₹{(row.amount_paise ?? 0) / 100}</div>
                     <div className="text-sm">Status: {row.status}</div>
+                    <div className="text-sm mt-2">Ticket Scanned: {row.checked_in || row.checked_in_at ? 'Yes' : 'No'}</div>
+                    {row.checked_in_at && (<div className="text-xs text-white/70">At: {new Date(row.checked_in_at).toLocaleString()}</div>)}
+                    {row.checked_in_by && (<div className="text-xs text-white/70">By: {row.checked_in_by}</div>)}
                   </div>
                   <div>
                     <div className="text-white/60 text-xs mb-2">QR Code</div>

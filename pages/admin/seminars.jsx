@@ -51,6 +51,14 @@ export default function AdminSeminars() {
       setLoading(false)
     }
     load()
+    // Live updates for scan status: subscribe to changes
+    let timer
+    const kick = () => { clearTimeout(timer); timer = setTimeout(() => load(), 300) }
+    const channel = supabase
+      .channel('admin-seminars-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'seminar_registrations' }, () => kick())
+      .subscribe()
+    return () => { try { clearTimeout(timer); supabase.removeChannel(channel) } catch {} }
   }, [session, debounced, slug])
 
   useEffect(() => {
@@ -183,6 +191,7 @@ export default function AdminSeminars() {
                       <th className="py-2 pr-4">Amount</th>
                       <th className="py-2 pr-4">Status</th>
                       <th className="py-2 pr-4">QR</th>
+                      <th className="py-2 pr-4">Ticket Scanned</th>
                       <th className="py-2 pr-4">Actions</th>
                     </tr>
                   </thead>
@@ -212,6 +221,7 @@ export default function AdminSeminars() {
                             <span className="text-white/50">—</span>
                           )}
                         </td>
+                        <td className="py-2 pr-4">{r.checked_in || r.checked_in_at ? 'Yes' : 'No'}</td>
                         <td className="py-2 pr-4">
                           <div className="flex items-center gap-2 flex-wrap">
                             <button
