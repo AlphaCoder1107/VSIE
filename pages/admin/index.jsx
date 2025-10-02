@@ -116,9 +116,10 @@ export default function AdminHome() {
         const groups = {}
         for (const r of rows) {
           const slug = String(r.event_slug || 'unknown')
-          if (!groups[slug]) groups[slug] = { event_slug: slug, count: 0, amount_sum: 0, last_created_at: null }
+          if (!groups[slug]) groups[slug] = { event_slug: slug, count: 0, scanned_count: 0, amount_sum: 0, last_created_at: null }
           groups[slug].count += 1
           groups[slug].amount_sum += Number(r.amount_paise || 0)
+          if (r.checked_in || r.checked_in_at) groups[slug].scanned_count += 1
           const ts = r.created_at ? new Date(r.created_at).toISOString() : null
           if (ts && (!groups[slug].last_created_at || ts > groups[slug].last_created_at)) groups[slug].last_created_at = ts
         }
@@ -131,6 +132,16 @@ export default function AdminHome() {
       setLoadingEvents(false)
     }
     loadEvents()
+
+    // Live updates: subscribe to changes on seminar_registrations and refresh aggregates (debounced)
+    let timer
+    const kick = () => { clearTimeout(timer); timer = setTimeout(() => loadEvents(), 400) }
+    const channel = supabase
+      .channel('admin-seminar-overview')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'seminar_registrations' }, () => kick())
+      .subscribe()
+
+    return () => { try { clearTimeout(timer); supabase.removeChannel(channel) } catch {} }
   }, [session])
 
   // Debounce the search input to avoid spamming the function
@@ -302,6 +313,7 @@ export default function AdminHome() {
                           <div className="text-lg font-semibold">{ev.event_slug}</div>
                           <div className="text-white/70 text-sm">Base Info</div>
                           <div className="text-white/50 text-xs mt-1">{ev.count} registrations • ₹{(ev.amount_sum || 0) / 100} collected</div>
+                          <div className="text-white/60 text-xs mt-0.5">{ev.scanned_count || 0} tickets scanned</div>
                         </div>
                         <Link href={`/admin/seminars?slug=${encodeURIComponent(ev.event_slug)}`} className="shrink-0 inline-flex items-center justify-center h-10 px-4 rounded-full bg-black/60 text-white text-sm">View</Link>
                       </div>

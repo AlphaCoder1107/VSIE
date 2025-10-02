@@ -44,7 +44,7 @@ serve(async (req: Request) => {
   const safeLimit = Math.max(1, Math.min(1000, limit))
   let builder = supabaseAdmin
     .from('seminar_registrations')
-    .select('id, created_at, registration_code, event_slug, student_name, student_email, student_phone, college, year, amount_paise, status, qr_url, qr_generated, qr_generated_at')
+    .select('id, created_at, registration_code, event_slug, student_name, student_email, student_phone, college, year, amount_paise, status, qr_url, qr_generated, qr_generated_at, checked_in, checked_in_at')
     .order('created_at', { ascending: false })
 
   const slug = String(event_slug || '').trim()
