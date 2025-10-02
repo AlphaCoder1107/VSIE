@@ -75,7 +75,9 @@ export default function EventDetail({ event }) {
   const canSubmit = useMemo(() => {
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
     const nameOk = form.name.trim().length >= 2
-    return nameOk && emailOk
+    const digits = (form.phone || '').replace(/\D/g, '')
+    const phoneOk = digits.length >= 10 // require at least 10 digits
+    return nameOk && emailOk && phoneOk
   }, [form])
 
   async function openCheckout() {
@@ -237,6 +239,12 @@ export default function EventDetail({ event }) {
                 <div>
                   <label className="text-sm text-black">Phone</label>
                   <input
+                    type="tel"
+                    inputMode="tel"
+                    required
+                    pattern="[0-9+\-()\s]{10,}"
+                    title="Please enter a valid phone number with at least 10 digits."
+                    placeholder="e.g. 9876543210"
                     className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 !text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-vsie-accent focus:border-vsie-accent"
                     value={form.phone}
                     onChange={(e)=>setForm(f=>({...f, phone:e.target.value}))}
