@@ -8,6 +8,8 @@ export default function Document() {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <meta name="theme-color" content="#0b1220" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="robots" content="index,follow" />
       </Head>
       <body className="h-full text-white antialiased">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] bg-vsie-accent text-white px-3 py-2 rounded-md">Skip to content</a>

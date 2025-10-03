@@ -268,6 +268,26 @@ export default function EventDetail({ event }) {
       <Head>
   <title>{event.title} — VIC Events</title>
         <meta name="description" content={event.excerpt} />
+        <link rel="canonical" href={`https://alphacoder1107.github.io/VSIE/events/${event.slug}/`} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Event',
+          name: event.title,
+          startDate: event.date,
+          eventStatus: 'https://schema.org/EventScheduled',
+          eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+          location: {
+            '@type': 'Place',
+            name: event.location,
+            address: event.location
+          },
+          image: event.image,
+          description: event.excerpt,
+          organizer: { '@type': 'Organization', name: 'VIC — Vidya Innovation Centre' },
+          offers: serverPricePaise != null ? [{
+            '@type': 'Offer', price: (serverPricePaise/100).toFixed(2), priceCurrency: 'INR', availability: isActive ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut'
+          }] : undefined
+        }) }} />
       </Head>
       <div className="min-h-screen bg-vsie-900">
         <Navbar />

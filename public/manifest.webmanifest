@@ -1,0 +1,9 @@
+{
+  "name": "VIC — Vidya Innovation Centre",
+  "short_name": "VIC",
+  "start_url": "/VSIE/",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "icons": []
+}

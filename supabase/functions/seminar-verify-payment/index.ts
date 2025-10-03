@@ -7,6 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.4'
 // QR generation (Node lib via esm.sh works in Deno with polyfills)
 import QRCode from 'https://esm.sh/qrcode@1.5.3'
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.1'
+import autoTable from 'https://esm.sh/jspdf-autotable@3.5.28'
 
 const SUPABASE_URL = (globalThis as any).Deno?.env.get('SUPABASE_URL') as string
 const SERVICE_ROLE_KEY = (globalThis as any).Deno?.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
@@ -21,6 +22,8 @@ const REPLY_TO = (globalThis as any).Deno?.env.get('REPLY_TO') as string | undef
 const VERIFY_BASE_URL = (globalThis as any).Deno?.env.get('VERIFY_BASE_URL') as string | undefined
 const TICKET_URL_BASE = (globalThis as any).Deno?.env.get('TICKET_URL_BASE') as string | undefined
 const SEPARATE_RECEIPT_EMAIL = String(((globalThis as any).Deno?.env.get('SEPARATE_RECEIPT_EMAIL')) || '').toLowerCase() === 'true'
+const ORG_ADDRESS = (globalThis as any).Deno?.env.get('ORG_ADDRESS') as string | undefined
+const ORG_GSTIN = (globalThis as any).Deno?.env.get('ORG_GSTIN') as string | undefined
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
@@ -71,7 +74,7 @@ async function dataUrlToBytes(dataUrl: string): Promise<Uint8Array> {
   return bytes
 }
 
-async function uploadQrAndEmail({ id, registration_code, student_email, student_name, event_slug }: any) {
+async function uploadQrAndEmail({ id, registration_code, student_email, student_name, event_slug }: any, extraAttachments?: any[]) {
   if (!STORAGE_BUCKET) return { uploaded: false, emailed: false }
   // 1) Build QR payload and render to PNG data URL
   const payload = buildQrPayload({ id, registration_code, student_name, student_email })
@@ -152,7 +155,7 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
         { type: 'text/plain', value: text },
         { type: 'text/html', value: html }
       ],
-      // Inline the QR via CID; avoid duplicate image attachment to reduce size
+      // Inline the QR via CID; attach optional extras (e.g., PDF receipt)
       attachments: [
         {
           content: btoa(String.fromCharCode(...pngBytes)),
@@ -160,7 +163,8 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
           type: 'image/png',
           disposition: 'inline',
           content_id: 'qr-image'
-        }
+        },
+        ...(Array.isArray(extraAttachments) ? extraAttachments : [])
       ],
       // Reduce spam signals
       tracking_settings: { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false } },
@@ -200,8 +204,9 @@ async function uploadQrAndEmail({ id, registration_code, student_email, student_
 }
 
 function formatINR(paise: number) {
-  const rupees = (Number(paise || 0) / 100).toFixed(2)
-  return `₹${rupees}`
+  const rupees = Number(paise || 0) / 100
+  const str = rupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `₹${str}`
 }
 
 async function buildReceiptPdf({
@@ -216,24 +221,105 @@ async function buildReceiptPdf({
   razorpay_payment_id,
   txn_date
 }: any): Promise<Uint8Array> {
-  const doc = new jsPDF()
-  const left = 14
-  let y = 18
-  doc.setFontSize(16)
-  doc.text(`${org} — Payment Receipt`, left, y)
-  y += 8
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  const margin = 40
+  const pageWidth = doc.internal.pageSize.getWidth()
+  let y = margin
+
+  // Header
+  doc.setFontSize(18)
+  doc.text(`${org} — Payment Receipt`, margin, y)
+  if (ORG_ADDRESS) {
+    doc.setFontSize(10)
+    const lines = doc.splitTextToSize(ORG_ADDRESS, pageWidth - margin * 2)
+    y += 14
+    doc.text(lines as unknown as string, margin, y)
+  }
+  if (ORG_GSTIN) {
+    y += 14
+    doc.setFontSize(10)
+    doc.text(`GSTIN: ${ORG_GSTIN}`, margin, y)
+  }
+  y += 22
+
+  // Meta boxes: Receipt/Date (left), Billing (right)
   doc.setFontSize(11)
-  doc.text(`Receipt No: ${code}`, left, y); y += 6
-  doc.text(`Event: ${event_slug}`, left, y); y += 6
-  doc.text(`Amount: ${formatINR(amount_paise)}`, left, y); y += 10
-  doc.text(`Name: ${student_name || '-'}`, left, y); y += 6
-  doc.text(`Email: ${student_email || '-'}`, left, y); y += 6
-  doc.text(`Phone: ${student_phone || '-'}`, left, y); y += 10
-  doc.text(`Razorpay Order ID: ${razorpay_order_id}`, left, y); y += 6
-  doc.text(`Razorpay Payment ID: ${razorpay_payment_id}`, left, y); y += 6
-  doc.text(`Date: ${txn_date}`, left, y); y += 10
+  const boxW = (pageWidth - margin * 2) / 2 - 8
+  const metaLeftY = y
+  doc.text(`Receipt No: ${code}`, margin, y)
+  y += 14
+  doc.text(`Date: ${txn_date}`, margin, y)
+
+  // Bill to
+  let yRight = metaLeftY
+  const rightX = margin + boxW + 16
+  doc.text('Bill To:', rightX, yRight)
+  yRight += 14
+  doc.text(`${student_name || '-'}`, rightX, yRight)
+  yRight += 14
+  doc.text(`${student_email || '-'}`, rightX, yRight)
+  yRight += 14
+  if (student_phone) { doc.text(`${student_phone}`, rightX, yRight); yRight += 14 }
+
+  // Move y below the taller of the two columns
+  y = Math.max(y, yRight) + 18
+
+  // Items table (single line item)
+  const amount = Number(amount_paise || 0) / 100
+  const columns = [
+    { header: 'S.No', dataKey: 'sno' },
+    { header: 'Description', dataKey: 'desc' },
+    { header: 'Qty', dataKey: 'qty' },
+    { header: 'Unit (₹)', dataKey: 'unit' },
+    { header: 'Amount (₹)', dataKey: 'amt' }
+  ]
+  const rows = [
+    { sno: 1, desc: `Event Registration — ${event_slug}`, qty: 1, unit: amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }), amt: amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }) }
+  ]
+  autoTable(doc, {
+    head: [columns.map(c => c.header)],
+    body: rows.map(r => [r.sno, r.desc, r.qty, r.unit, r.amt]),
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: 'grid',
+    headStyles: { fillColor: [40, 40, 40], textColor: 255, fontSize: 11 },
+    styles: { fontSize: 10, cellPadding: 6, halign: 'left' },
+    columnStyles: {
+      0: { halign: 'right', cellWidth: 50 },
+      2: { halign: 'right', cellWidth: 60 },
+      3: { halign: 'right', cellWidth: 90 },
+      4: { halign: 'right', cellWidth: 100 }
+    }
+  })
+  // Totals table aligned to the right
+  const afterItemsY = (doc as any).lastAutoTable.finalY + 8
+  const totalsWidth = 220
+  const totalsX = pageWidth - margin - totalsWidth
+  autoTable(doc, {
+    body: [
+      ['Subtotal', amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })],
+      // Add GST row if you later enable taxes
+      // ['GST (0%)', '0.00'],
+      ['Total', amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })]
+    ],
+    startY: afterItemsY,
+    margin: { left: totalsX, right: margin },
+    theme: 'grid',
+    styles: { fontSize: 11, cellPadding: 6 },
+    columnStyles: { 0: { halign: 'right' }, 1: { halign: 'right' } }
+  })
+
+  // Payment information
+  const infoY = (doc as any).lastAutoTable.finalY + 18
+  doc.setFontSize(11)
+  doc.text(`Razorpay Order ID: ${razorpay_order_id}`, margin, infoY)
+  doc.text(`Razorpay Payment ID: ${razorpay_payment_id}`, margin, infoY + 14)
+
+  // Footer note
+  const footerY = infoY + 40
   doc.setFontSize(9)
-  doc.text('This is a system-generated receipt. Please retain for your records.', left, y)
+  doc.text('This is a system-generated receipt. Please retain for your records.', margin, footerY)
+
   const ab = doc.output('arraybuffer') as ArrayBuffer
   return new Uint8Array(ab)
 }
@@ -297,29 +383,44 @@ serve(async (req: Request) => {
     }
     console.log('[seminar-verify] inserted', { id: data?.id, code: data?.registration_code })
 
-    // 4) Generate QR, upload, and send ticket email, then send a receipt (best-effort)
+    // 4) Generate QR, upload. Build receipt, attach to ticket email (or send separately) — best-effort
     try {
+      // Build receipt PDF bytes first
+      let receiptAttachment: any[] | undefined
+      if (SENDGRID_API_KEY && EMAIL_FROM && insertPayload.student_email) {
+        try {
+          const pdfBytes = await buildReceiptPdf({
+            code: data?.registration_code,
+            event_slug: insertPayload.event_slug,
+            amount_paise: insertPayload.amount_paise,
+            student_name: insertPayload.student_name,
+            student_email: insertPayload.student_email,
+            student_phone: insertPayload.student_phone,
+            razorpay_order_id,
+            razorpay_payment_id,
+            txn_date: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+          })
+          if (!SEPARATE_RECEIPT_EMAIL) {
+            receiptAttachment = [{
+              content: btoa(String.fromCharCode(...pdfBytes)),
+              filename: `receipt_${sanitizeFileName(String(data?.registration_code || 'ticket'))}.pdf`,
+              type: 'application/pdf',
+              disposition: 'attachment'
+            }]
+          }
+        } catch (e) { console.warn('[seminar-verify] build-receipt failed', e) }
+      }
+
       await uploadQrAndEmail({
         id: data?.id,
         registration_code: data?.registration_code,
         student_email: insertPayload.student_email,
         student_name: insertPayload.student_name,
         event_slug: insertPayload.event_slug
-      })
-      // Build receipt PDF and send as attachment
-      if (SENDGRID_API_KEY && EMAIL_FROM && insertPayload.student_email) {
-        const pdfBytes = await buildReceiptPdf({
-          code: data?.registration_code,
-          event_slug: insertPayload.event_slug,
-          amount_paise: insertPayload.amount_paise,
-          student_name: insertPayload.student_name,
-          student_email: insertPayload.student_email,
-          student_phone: insertPayload.student_phone,
-          razorpay_order_id,
-          razorpay_payment_id,
-          txn_date: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-        })
+      }, receiptAttachment)
 
+      // If configured, also send a separate receipt email (in addition to attachment above)
+      if (SEPARATE_RECEIPT_EMAIL && SENDGRID_API_KEY && EMAIL_FROM && insertPayload.student_email && receiptAttachment?.[0]) {
         const basePayload: any = {
           personalizations: [{ to: [{ email: insertPayload.student_email }] }],
           from: EMAIL_FROM_NAME ? { email: EMAIL_FROM, name: EMAIL_FROM_NAME } : { email: EMAIL_FROM },
@@ -328,35 +429,17 @@ serve(async (req: Request) => {
             { type: 'text/plain', value: `Thanks for your payment for ${insertPayload.event_slug}. Receipt attached. Registration code: ${data?.registration_code}.` },
             { type: 'text/html', value: `<p>Thanks for your payment for <b>${insertPayload.event_slug}</b>.</p><p>Registration code: <b>${data?.registration_code}</b></p><p>Receipt attached as PDF.</p>` }
           ],
-          attachments: [
-            {
-              content: btoa(String.fromCharCode(...pdfBytes)),
-              filename: `receipt_${sanitizeFileName(String(data?.registration_code || 'ticket'))}.pdf`,
-              type: 'application/pdf',
-              disposition: 'attachment'
-            }
-          ],
+          attachments: receiptAttachment,
           tracking_settings: { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false } },
           mail_settings: { bypass_list_management: { enable: true } },
           categories: ['transactional','receipt']
         }
         if (REPLY_TO) basePayload.reply_to = { email: REPLY_TO }
-
-        if (SEPARATE_RECEIPT_EMAIL) {
-          await fetch('https://api.sendgrid.com/v3/mail/send', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(basePayload)
-          })
-        } else {
-          // If not separate, we can alternatively include PDF in ticket email — already sent above.
-          // For now, send as a follow-up in the same thread via same subject prefix.
-          await fetch('https://api.sendgrid.com/v3/mail/send', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(basePayload)
-          })
-        }
+        await fetch('https://api.sendgrid.com/v3/mail/send', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(basePayload)
+        })
       }
     } catch (postErr) {
       // log and continue; payment is already successful and row inserted

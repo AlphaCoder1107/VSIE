@@ -21,9 +21,27 @@ export default function Home({ startups, events }) {
       <Head>
   <title>VIC — Vidya Innovation Centre</title>
   <meta name="description" content="Launch college startups faster. VIC at Vidya University helps students, alumni, and faculty build, validate, and scale their ventures." />
+  <meta name="keywords" content="Vidya Innovation Centre, VIC, Vidya University startups, college incubator, hackathon, bootcamp, entrepreneurship" />
+  <link rel="canonical" href="https://alphacoder1107.github.io/VSIE/" />
   <meta property="og:title" content="VIC — Vidya Innovation Centre" />
   <meta property="og:description" content="Launch college startups faster at VIC." />
         <meta property="og:type" content="website" />
+  <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'CollegeOrUniversity',
+    name: 'VIC — Vidya Innovation Centre',
+    url: 'https://alphacoder1107.github.io/VSIE/',
+    sameAs: [],
+    department: {
+      '@type': 'Organization',
+      name: 'Innovation & Entrepreneurship',
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://alphacoder1107.github.io/VSIE/?q={search_term_string}',
+      'query-input': 'required name=search_term_string'
+    }
+  }) }} />
       </Head>
       <div className="min-h-screen bg-vsie-900">
         <Navbar />

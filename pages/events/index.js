@@ -18,6 +18,8 @@ export default function EventsPage({ events }) {
     <>
       <Head>
   <title>VIC — Events</title>
+  <meta name="description" content="Workshops, hackathons, and demo days at VIC, Vidya University." />
+  <link rel="canonical" href="https://alphacoder1107.github.io/VSIE/events/" />
       </Head>
       <div className="min-h-screen bg-vsie-900">
         <Navbar />

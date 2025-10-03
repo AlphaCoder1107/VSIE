@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://alphacoder1107.github.io/VSIE/sitemap.xml
