@@ -1,0 +1,33 @@
+name: Blue-Green Deploy (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Release tag or commit"
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: out
+
+  smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping diag-health
+        run: |
+          curl -sSf "${{ vars.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/diag-health" | jq .
