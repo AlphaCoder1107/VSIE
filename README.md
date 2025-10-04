@@ -42,6 +42,12 @@ Deploy on Vercel, Netlify, or GitHub Pages (static export).
 	- A workflow `.github/workflows/deploy.yml` is included; it builds with `next export` and deploys the `out` folder
 	- After the action runs, your site will be live at `https://<user>.github.io/<repo>/`
 
-For Vercel:
+For Vercel (Primary A):
 1. Import repository in Vercel
-2. Deploy with defaults
+2. Set environment: `NEXT_PUBLIC_BASE_PATH` = "" (empty)
+3. Deploy with defaults (build: `npm run build`, output: `out`)
+
+Dual-host (Blue–Green) with Cloudflare Worker:
+- Keep GitHub Pages as secondary (B) at `/VSIE` base path
+- Set up the Worker in `cloudflare/worker-router.js` and bind KV `ENV_KV` with `ACTIVE_ENV=A|B`
+- Docs: `docs/vercel-setup.md`, `docs/cloudflare-worker-setup.md`, `docs/production-blue-green.md`

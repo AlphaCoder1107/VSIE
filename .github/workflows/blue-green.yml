@@ -6,6 +6,9 @@ on:
       release:
         description: "Release tag or commit"
         required: false
+      worker_url:
+        description: "Cloudflare Worker URL for health check"
+        required: false
 
 jobs:
   build:
@@ -28,6 +31,22 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Ping diag-health
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Run smoke checks (Supabase + Worker)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          WORKER_URL: ${{ github.event.inputs.worker_url }}
+        run: node scripts/smoke-check.mjs
+
+  flip:
+    needs: smoke
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Flip ACTIVE_ENV in Cloudflare KV (placeholder)
         run: |
-          curl -sSf "${{ vars.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/diag-health" | jq .
+          echo "Call Cloudflare API to set ACTIVE_ENV here."
+          echo "Example: curl -X PUT https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS/values/ACTIVE_ENV -H 'Authorization: Bearer $CF_API_TOKEN' --data 'A'"
